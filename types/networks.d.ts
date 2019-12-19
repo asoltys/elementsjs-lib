@@ -5,12 +5,12 @@ export interface Network {
     pubKeyHash: number;
     scriptHash: number;
     wif: number;
+    assetHash: string;
 }
 interface Bip32 {
     public: number;
     private: number;
 }
-export declare const bitcoin: Network;
+export declare const liquid: Network;
 export declare const regtest: Network;
-export declare const testnet: Network;
 export {};

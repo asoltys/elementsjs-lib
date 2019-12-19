@@ -53,7 +53,7 @@ function p2wsh(a, opts) {
   });
   let network = a.network;
   if (!network) {
-    network = (a.redeem && a.redeem.network) || networks_1.bitcoin;
+    network = (a.redeem && a.redeem.network) || networks_1.liquid;
   }
   const o = { network };
   lazy.prop(o, 'address', () => {

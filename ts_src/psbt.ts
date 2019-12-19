@@ -21,7 +21,7 @@ import {
   Signer,
   SignerAsync,
 } from './ecpair';
-import { bitcoin as btcNetwork, Network } from './networks';
+import { liquid as btcNetwork, Network } from './networks';
 import * as payments from './payments';
 import * as bscript from './script';
 import { Output, Transaction } from './transaction';

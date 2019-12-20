@@ -7,6 +7,23 @@ const types = require('./types');
 const bech32 = require('bech32');
 const bs58check = require('bs58check');
 const typeforce = require('typeforce');
+function findAddressType(address, network) {
+  // TODO: native segwit
+  if (address.startsWith('el') || address.startsWith('ert'))
+    throw new TypeError('Native segwit is not supported yet');
+  const payload = bs58check.decode(address);
+  // Check if length matches uncofindetial or confidential address
+  if (payload.length !== 21 && payload.length !== 55)
+    throw new TypeError(address + ' is invalid');
+  // For an unconfidential address the first byte defines its type.
+  // For a confidential address, the first byte contains the blinding prefix,
+  // while the second byte contains the address type
+  const prefix = payload.readUInt8(0);
+  if (prefix === network.confidentialPrefix)
+    return { confidential: true, version: payload.readUInt8(1) };
+  return { confidential: false, version: prefix };
+}
+exports.findAddressType = findAddressType;
 function fromBase58Check(address) {
   const payload = bs58check.decode(address);
   // TODO: 4.0.0, move to "toOutputScript"

@@ -38,6 +38,8 @@ exports.Network = typeforce.compile({
   pubKeyHash: typeforce.UInt8,
   scriptHash: typeforce.UInt8,
   wif: typeforce.UInt8,
+  assetHash: typeforce.String,
+  confidentialPrefix: typeforce.UInt8,
 });
 exports.Buffer256bit = typeforce.BufferN(32);
 exports.Hash160bit = typeforce.BufferN(20);

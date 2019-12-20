@@ -19,6 +19,34 @@ export interface Bech32Result {
   data: Buffer;
 }
 
+export interface FindAddressTypeResult {
+  version: number;
+  confidential: boolean;
+}
+
+export function findAddressType(
+  address: string,
+  network: Network,
+): FindAddressTypeResult {
+  // TODO: native segwit
+  if (address.startsWith('el') || address.startsWith('ert'))
+    throw new TypeError('Native segwit is not supported yet');
+
+  const payload = bs58check.decode(address);
+
+  // Check if length matches uncofindetial or confidential address
+  if (payload.length !== 21 && payload.length !== 55)
+    throw new TypeError(address + ' is invalid');
+
+  // For an unconfidential address the first byte defines its type.
+  // For a confidential address, the first byte contains the blinding prefix,
+  // while the second byte contains the address type
+  const prefix = payload.readUInt8(0);
+  if (prefix === network.confidentialPrefix)
+    return { confidential: true, version: payload.readUInt8(1) };
+  return { confidential: false, version: prefix };
+}
+
 export function fromBase58Check(address: string): Base58CheckResult {
   const payload = bs58check.decode(address);
 

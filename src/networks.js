@@ -11,6 +11,7 @@ exports.liquid = {
   pubKeyHash: 57,
   scriptHash: 39,
   wif: 0x80,
+  confidentialPrefix: 12,
   assetHash: '6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d',
 };
 exports.regtest = {
@@ -24,5 +25,6 @@ exports.regtest = {
   pubKeyHash: 235,
   scriptHash: 75,
   wif: 0xef,
+  confidentialPrefix: 4,
   assetHash: '5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225',
 };

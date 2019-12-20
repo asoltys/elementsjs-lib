@@ -7,6 +7,7 @@ export interface Network {
     scriptHash: number;
     wif: number;
     assetHash: string;
+    confidentialPrefix: number;
 }
 interface Bip32 {
     public: number;

@@ -8,36 +8,70 @@ const NETWORKS = require('../src/networks');
 describe('address', () => {
   describe('findAddressType', () => {
     fixtures.standard.forEach(f => {
-      if (!f.base58check) return;
+      if (!f.unconfidentialAddress) return;
 
-      it('finds type for ' + f.base58check, () => {
-        const t = baddress.findAddressType(f.base58check, NETWORKS[f.network]);
+      it('finds type for ' + f.unconfidentialAddress, () => {
+        const t = baddress.findAddressType(
+          f.unconfidentialAddress,
+          NETWORKS[f.network],
+        );
 
         assert.strictEqual(t.version, f.version);
-        assert.strictEqual(t.confidential, f.confidential);
+        assert.strictEqual(t.confidential, false);
+      });
+      it('finds type for ' + f.confidentialAddress, () => {
+        const t = baddress.findAddressType(
+          f.confidentialAddress,
+          NETWORKS[f.network],
+        );
+
+        assert.strictEqual(t.version, f.version);
+        assert.strictEqual(t.confidential, true);
       });
     });
   });
   describe('blindingPubKeyFromConfidentialAddress', () => {
     fixtures.standard.forEach(f => {
-      if (!f.base58check) return;
-      if (!f.confidential) return;
+      if (!f.confidentialAddress) return;
 
-      it('extracts blinding pubkey from ' + f.base58check, () => {
-        const t = baddress.blindingPubKeyFromConfidentialAddress(f.base58check);
+      it('extracts blinding pubkey from ' + f.confidentialAddress, () => {
+        const t = baddress.blindingPubKeyFromConfidentialAddress(
+          f.confidentialAddress,
+        );
         assert.strictEqual(t.toString('hex'), f.blindkey);
       });
     });
 
     fixtures.standard.forEach(f => {
-      if (!f.base58check) return;
-      if (f.confidential) return;
+      if (!f.unconfidentialAddress) return;
 
-      it('extract blinding pubkey fails for ' + f.base58check, () => {
+      it('extract blinding pubkey fails for ' + f.unconfidentialAddress, () => {
         assert.throws(() => {
-          baddress.blindingPubKeyFromConfidentialAddress(f.base58check);
-        }, f.base58check + 'is too short');
+          baddress.blindingPubKeyFromConfidentialAddress(
+            f.unconfidentialAddress,
+          );
+        }, f.unconfidentialAddress + 'is too short');
       });
+    });
+  });
+  describe('confidentialAddressFromAddress', () => {
+    fixtures.standard.forEach(f => {
+      if (!f.unconfidentialAddress) return;
+
+      it(
+        'create confidential address from ' +
+          f.unconfidentialAddress +
+          ' and ' +
+          f.blindkey,
+        () => {
+          const t = baddress.confidentialAddressFromAddress(
+            f.unconfidentialAddress,
+            f.blindkey,
+            NETWORKS[f.network],
+          );
+          assert.strictEqual(t, f.confidentialAddress);
+        },
+      );
     });
   });
 });

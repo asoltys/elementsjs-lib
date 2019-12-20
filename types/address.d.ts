@@ -14,6 +14,7 @@ export interface FindAddressTypeResult {
 }
 export declare function findAddressType(address: string, network: Network): FindAddressTypeResult;
 export declare function blindingPubKeyFromConfidentialAddress(address: string): Buffer;
+export declare function confidentialAddressFromAddress(address: string, blindkey: string, network: Network): string;
 export declare function fromBase58Check(address: string): Base58CheckResult;
 export declare function fromBech32(address: string): Bech32Result;
 export declare function toBase58Check(hash: Buffer, version: number): string;

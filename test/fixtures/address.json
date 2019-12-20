@@ -3,47 +3,30 @@
     {
       "network": "liquid",
       "version": 57,
-      "confidential": true,
       "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
-      "base58check": "VTpz1bNuCALgavJKgbAw9Lpp9A72rJy64XPqgqfnaLpMjRcPh5UHBqyRUE4WMZ3asjqu7YEPVAnWw2EK"
+      "unconfidentialAddress": "Q7qcjTLsYGoMA7TjUp97R6E6AM5VKqBik6",
+      "confidentialAddress": "VTpz1bNuCALgavJKgbAw9Lpp9A72rJy64XPqgqfnaLpMjRcPh5UHBqyRUE4WMZ3asjqu7YEPVAnWw2EK"
     },
     {
       "network": "liquid",
       "version": 57,
-      "confidential": false,
-      "base58check": "Q7qcjTLsYGoMA7TjUp97R6E6AM5VKqBik6"
-    },
-    {
-      "network": "liquid",
-      "version": 57,
-      "confidential": false,
-      "base58check": "Pz7eBTfLoVaisE57DLn6rZhEtFNa7SnZ2Z"
+      "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
+      "unconfidentialAddress": "Pz7eBTfLoVaisE57DLn6rZhEtFNa7SnZ2Z",
+      "confidentialAddress": "VTpz1bNuCALgavJKgbAw9Lpp9A72rJy64XPqgqfnaLpMjRcFy6vHWKEeFbmcxvn7WjHNagxHnFaRcVuS"
     },
     {
       "network": "regtest",
       "version": 75,
-      "confidential": true,
-      "blindkey": "0374ed330894b04817c26394f1f66ec4fb21de061cd50d0fbba60a4bf87fddbd44",
-      "base58check": "Azpu51kDX2s18K2joSriHxwBzGwfTAWVF5TN6wCXx2fYFAmWZED5Lo6NUp4KzztrCR3JZHjUWjBvSnQo"
-    },
-    {
-      "network": "regtest",
-      "version": 75,
-      "confidential": false,
-      "base58check": "XFKcLWJmPuToz62uc2sgCBUddmH6yopoxE"
+      "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
+      "unconfidentialAddress": "XFKcLWJmPuToz62uc2sgCBUddmH6yopoxE",
+      "confidentialAddress": "AzppxC5RDs8yB8mabhwS13y4WbsWoS41fLV8GKM4woLUJB5RxNBVfK6wdVX4QVoubRXFKKfbPhEKKTKc"
     },
     {
       "network": "regtest",
       "version": 235,
-      "confidential": true,
-      "blindkey": "03fdddec0cd5b7b60d3bbc9f1f5dc3b61ca170a2afd25af1d69e04b48c7625d080",
-      "base58check": "CTEyVX5fVmz1T1no9yfAesmEy5CaDnd6TWUV99RzSUbRmNSMsLaCHgkS4KXc5VRcSQanDtQSvwqfDK2J"
-    },
-    {
-      "network": "regtest",
-      "version": 235,
-      "confidential": false,
-      "base58check": "2dgp82cKUqN7pesBxcK6smvFSzCjyqqv1wL"
+      "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
+      "unconfidentialAddress": "2dgp82cKUqN7pesBxcK6smvFSzCjyqqv1wL",
+      "confidentialAddress": "CTEqfbuwRjMKaivrrNqMSZahNuqitEMLabLzfxsyNPpPD2DvPGn9SW3Hp4RTEbgQgHtckwd8ons8vHcg"
     }
   ]
 }

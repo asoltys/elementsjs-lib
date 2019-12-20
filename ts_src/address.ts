@@ -63,6 +63,40 @@ export function blindingPubKeyFromConfidentialAddress(address: string): Buffer {
   return payload.slice(2, 35);
 }
 
+export function confidentialAddressFromAddress(
+  address: string,
+  blindkey: string,
+  network: Network,
+): string {
+  if (address.startsWith(network.bech32))
+    throw new TypeError('Native segwit is not supported yet');
+
+  const payload = bs58check.decode(address);
+  const prefix = payload.readUInt8(0);
+  // Check if address has valid length and prefix
+  if (
+    payload.length !== 21 ||
+    (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
+  )
+    throw new TypeError(address + 'is not valid');
+
+  // Check if blind key has valid length
+  const rawBlindkey = Buffer.from(blindkey, 'hex');
+  if (rawBlindkey.length < 33) throw new TypeError(blindkey + 'is too short');
+  if (rawBlindkey.length > 33) throw new TypeError(blindkey + 'is too long');
+
+  const prefixBuf = new Uint8Array(2);
+  prefixBuf[0] = network.confidentialPrefix;
+  prefixBuf[1] = prefix;
+  const confidentialAddress = Buffer.concat([
+    prefixBuf,
+    rawBlindkey,
+    Buffer.from(payload.slice(1)),
+  ]);
+
+  return bs58check.encode(confidentialAddress);
+}
+
 export function fromBase58Check(address: string): Base58CheckResult {
   const payload = bs58check.decode(address);
 

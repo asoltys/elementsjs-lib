@@ -2,7 +2,8 @@
 Object.defineProperty(exports, '__esModule', { value: true });
 exports.liquid = {
   messagePrefix: '\x18Liquid Signed Message:\n',
-  bech32: 'lq',
+  bech32: 'ex',
+  blech32: 'lq',
   bip32: {
     public: 0x0488b21e,
     private: 0x0488ade4,
@@ -14,7 +15,8 @@ exports.liquid = {
 };
 exports.regtest = {
   messagePrefix: '\x18Liquid Signed Message:\n',
-  bech32: 'tb',
+  bech32: 'ert',
+  blech32: 'el',
   bip32: {
     public: 0x043587cf,
     private: 0x04358394,

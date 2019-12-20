@@ -74,4 +74,21 @@ describe('address', () => {
       );
     });
   });
+  describe('confidentialAddressToAddress', () => {
+    fixtures.standard.forEach(f => {
+      if (!f.confidentialAddress) return;
+
+      it(
+        'extract address from a confidential address ' + f.confidentialAddress,
+        () => {
+          const unconfidential = baddress.confidentialAddressToAddress(
+            f.confidentialAddress,
+            NETWORKS[f.network],
+          );
+
+          assert.strictEqual(unconfidential, f.unconfidentialAddress);
+        },
+      );
+    });
+  });
 });

@@ -63,6 +63,33 @@ function confidentialAddressFromAddress(address, blindkey, network) {
   return bs58check.encode(confidentialAddress);
 }
 exports.confidentialAddressFromAddress = confidentialAddressFromAddress;
+function confidentialAddressToAddress(address, network) {
+  const payload = bs58check.decode(address);
+  const prefix = payload.readUInt8(1);
+  // Check if address has valid length and prefix
+  if (
+    payload.length !== 55 ||
+    (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
+  )
+    throw new TypeError(address + 'is not valid');
+  // Check if length matches confidential address
+  if (payload.length < 55) throw new TypeError(address + ' is too short');
+  if (payload.length > 55) throw new TypeError(address + ' is too long');
+  const unconfidential = payload.slice(35, payload.length);
+  // 0x39 is address version on Liquid v1 network for P2PKH address
+  // 0xEB is address version on Liquid v1 regtest network for P2PKH address
+  // ToDo: 0x27 is address version on Liquid v1 network for P2SH address
+  // ToDo: 0x4B is address version on Liquid v1 regtest network for P2SH address
+  const versionBuf = new Uint8Array(1);
+  versionBuf[0] = prefix;
+  const unconfidentialAddressBuffer = Buffer.concat([
+    versionBuf,
+    unconfidential,
+  ]);
+  const unconfidentialAddress = bs58check.encode(unconfidentialAddressBuffer);
+  return unconfidentialAddress;
+}
+exports.confidentialAddressToAddress = confidentialAddressToAddress;
 function fromBase58Check(address) {
   const payload = bs58check.decode(address);
   // TODO: 4.0.0, move to "toOutputScript"

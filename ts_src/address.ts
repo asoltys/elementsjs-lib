@@ -47,6 +47,22 @@ export function findAddressType(
   return { confidential: false, version: prefix };
 }
 
+export function blindingPubKeyFromConfidentialAddress(address: string): Buffer {
+  if (address.startsWith('el') || address.startsWith('ert'))
+    throw new TypeError('Native segwit is not support yet');
+
+  const payload = bs58check.decode(address);
+
+  // Confidential addresses have fixed length
+  if (payload.length < 55) throw new TypeError(address + ' is too short');
+  if (payload.length > 55) throw new TypeError(address + ' is too long');
+
+  // Blinded decoded haddress has the form:
+  // BLIND_PREFIX|ADDRESS_PREFIX|BLIND_KEY|SCRIPT_HASH
+  // Prefixes are 1 byte long, thus blinding key always starts at 3rd byte
+  return payload.slice(2, 35);
+}
+
 export function fromBase58Check(address: string): Base58CheckResult {
   const payload = bs58check.decode(address);
 

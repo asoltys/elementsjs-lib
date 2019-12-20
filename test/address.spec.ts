@@ -18,4 +18,26 @@ describe('address', () => {
       });
     });
   });
+  describe('blindingPubKeyFromConfidentialAddress', () => {
+    fixtures.standard.forEach(f => {
+      if (!f.base58check) return;
+      if (!f.confidential) return;
+
+      it('extracts blinding pubkey from ' + f.base58check, () => {
+        const t = baddress.blindingPubKeyFromConfidentialAddress(f.base58check);
+        assert.strictEqual(t.toString('hex'), f.blindkey);
+      });
+    });
+
+    fixtures.standard.forEach(f => {
+      if (!f.base58check) return;
+      if (f.confidential) return;
+
+      it('extract blinding pubkey fails for ' + f.base58check, () => {
+        assert.throws(() => {
+          baddress.blindingPubKeyFromConfidentialAddress(f.base58check);
+        }, f.base58check + 'is too short');
+      });
+    });
+  });
 });

@@ -7,3 +7,9 @@
 The following library forks `bitcoinjs/bitcoinjs-lib` and contains modifications that are necessary for support of elements-based blockchains such as [Blockstream Liquid](https://blockstream.com/liquid)
 
 Released under the terms of the [MIT LICENSE](LICENSE).
+
+## Examples
+
+The below examples are implemented as integration tests (as in [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib#examples)).
+
+- [Generate a random Liquid address](test/integration/addresses.spec.ts)

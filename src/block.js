@@ -24,7 +24,7 @@ class Block {
     this.nonce = 0;
     this.transactions = undefined;
   }
-  static fromBuffer(buffer) {
+  static fromBuffer(buffer, headersOnly = false) {
     if (buffer.length < 80) throw new Error('Buffer too small (< 80 bytes)');
     const bufferReader = new bufferutils_1.BufferReader(buffer);
     const block = new Block();
@@ -34,7 +34,7 @@ class Block {
     block.timestamp = bufferReader.readUInt32();
     block.bits = bufferReader.readUInt32();
     block.nonce = bufferReader.readUInt32();
-    if (buffer.length === 80) return block;
+    if (headersOnly || buffer.length === 80) return block;
     const readTransaction = () => {
       const tx = transaction_1.Transaction.fromBuffer(
         bufferReader.buffer.slice(bufferReader.offset),

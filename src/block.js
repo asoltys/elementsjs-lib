@@ -20,21 +20,23 @@ class Block {
     this.merkleRoot = undefined;
     this.timestamp = 0;
     this.witnessCommit = undefined;
+    this.height = 0;
     this.bits = 0;
     this.nonce = 0;
     this.transactions = undefined;
   }
   static fromBuffer(buffer, headersOnly = false) {
-    if (buffer.length < 80) throw new Error('Buffer too small (< 80 bytes)');
+    if (buffer.length < 84) throw new Error('Buffer too small (< 84 bytes)');
     const bufferReader = new bufferutils_1.BufferReader(buffer);
     const block = new Block();
     block.version = bufferReader.readInt32();
     block.prevHash = bufferReader.readSlice(32);
     block.merkleRoot = bufferReader.readSlice(32);
     block.timestamp = bufferReader.readUInt32();
+    block.height = bufferReader.readUInt32();
     block.bits = bufferReader.readUInt32();
     block.nonce = bufferReader.readUInt32();
-    if (headersOnly || buffer.length === 80) return block;
+    if (headersOnly || buffer.length === 84) return block;
     const readTransaction = () => {
       const tx = transaction_1.Transaction.fromBuffer(
         bufferReader.buffer.slice(bufferReader.offset),
@@ -54,8 +56,8 @@ class Block {
     if (witnessCommit) block.witnessCommit = witnessCommit;
     return block;
   }
-  static fromHex(hex) {
-    return Block.fromBuffer(Buffer.from(hex, 'hex'));
+  static fromHex(hex, headersOnly = false) {
+    return Block.fromBuffer(Buffer.from(hex, 'hex'), headersOnly);
   }
   static calculateTarget(bits) {
     const exponent = ((bits & 0xff000000) >> 24) - 3;
@@ -114,9 +116,9 @@ class Block {
     return base * 3 + total;
   }
   byteLength(headersOnly, allowWitness = true) {
-    if (headersOnly || !this.transactions) return 80;
+    if (headersOnly || !this.transactions) return 84;
     return (
-      80 +
+      84 +
       varuint.encodingLength(this.transactions.length) +
       this.transactions.reduce((a, x) => a + x.byteLength(allowWitness), 0)
     );
@@ -140,6 +142,7 @@ class Block {
     bufferWriter.writeSlice(this.prevHash);
     bufferWriter.writeSlice(this.merkleRoot);
     bufferWriter.writeUInt32(this.timestamp);
+    //  bufferWriter.writeUInt32(this.height);
     bufferWriter.writeUInt32(this.bits);
     bufferWriter.writeUInt32(this.nonce);
     if (headersOnly || !this.transactions) return buffer;

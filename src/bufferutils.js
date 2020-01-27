@@ -118,7 +118,7 @@ class BufferReader {
   }
   readSlice(n) {
     if (this.buffer.length < this.offset + n) {
-      throw new Error('Cannot read slice out of bounds');
+      throw new Error('Dare not read slice out of bounds');
     }
     const result = this.buffer.slice(this.offset, this.offset + n);
     this.offset += n;

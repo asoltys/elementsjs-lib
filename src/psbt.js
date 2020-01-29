@@ -535,10 +535,10 @@ exports.Psbt = Psbt;
 const transactionFromBuffer = buffer => new PsbtTransaction(buffer);
 /**
  * This class implements the Transaction interface from bip174 library.
- * It contains a bitcoinjs-lib Transaction object.
+ * It contains a liquidjs-lib Transaction object.
  */
 class PsbtTransaction {
-  constructor(buffer = Buffer.from([2, 0, 0, 0, 0, 0, 0, 0, 0, 0])) {
+  constructor(buffer = Buffer.from([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])) {
     this.tx = transaction_1.Transaction.fromBuffer(buffer);
     checkTxEmpty(this.tx);
     Object.defineProperty(this, 'tx', {
@@ -565,18 +565,19 @@ class PsbtTransaction {
       typeof input.hash === 'string'
         ? bufferutils_1.reverseBuffer(Buffer.from(input.hash, 'hex'))
         : input.hash;
-    this.tx.addInput(hash, input.index, input.sequence);
+    const script = input.script ? input.script : Buffer.alloc(0);
+    this.tx.addInput(hash, input.index, script, input.sequence, input.issuance);
   }
   addOutput(output) {
     if (
       output.script === undefined ||
       output.value === undefined ||
       !Buffer.isBuffer(output.script) ||
-      typeof output.value !== 'number'
+      !Buffer.isBuffer(output.value)
     ) {
       throw new Error('Error adding output.');
     }
-    this.tx.addOutput(output.script, output.value);
+    this.tx.addOutput(output.script, output.value, output.asset, output.nonce);
   }
   toBuffer() {
     return this.tx.toBuffer();
@@ -617,7 +618,7 @@ const isP2MS = isPaymentFactory(payments.p2ms);
 const isP2PK = isPaymentFactory(payments.p2pk);
 const isP2PKH = isPaymentFactory(payments.p2pkh);
 const isP2WPKH = isPaymentFactory(payments.p2wpkh);
-const isP2WSHScript = isPaymentFactory(payments.p2wsh);
+// const isP2WSHScript = isPaymentFactory(payments.p2wsh);
 function check32Bit(num) {
   if (
     typeof num !== 'number' ||
@@ -703,15 +704,14 @@ function checkScriptForPubkey(pubkey, script, action) {
 }
 function checkTxEmpty(tx) {
   const isEmpty = tx.ins.every(
-    input =>
-      input.script &&
-      input.script.length === 0 &&
-      input.witness &&
-      input.witness.length === 0,
+    input => input.script && input.script.length === 0,
   );
   if (!isEmpty) {
     throw new Error('Format Error: Transaction ScriptSigs are not empty');
   }
+  // if (tx.flag === 1 && tx.witnessIn.length > 0) {
+  //   throw new Error('Format Error: Transaction WitnessScriptSigs are not empty');
+  // }
 }
 function checkTxForDupeIns(tx, cache) {
   tx.ins.forEach(input => {
@@ -739,10 +739,6 @@ function scriptCheckerFactory(payment, paymentScriptName) {
   };
 }
 const checkRedeemScript = scriptCheckerFactory(payments.p2sh, 'Redeem script');
-const checkWitnessScript = scriptCheckerFactory(
-  payments.p2wsh,
-  'Witness script',
-);
 function getTxCacheValue(key, name, inputs, c) {
   if (!inputs.every(isFinalized))
     throw new Error(`PSBT must be finalized to calculate ${name}`);
@@ -851,70 +847,70 @@ function getHashForSig(inputIndex, input, cache, sighashTypes) {
     } else {
       script = prevout.script;
     }
-    if (isP2WSHScript(script)) {
-      if (!input.witnessScript)
-        throw new Error('Segwit input needs witnessScript if not P2WPKH');
-      checkWitnessScript(inputIndex, script, input.witnessScript);
-      hash = unsignedTx.hashForWitnessV0(
-        inputIndex,
-        input.witnessScript,
-        prevout.value,
-        sighashType,
-      );
-      script = input.witnessScript;
-    } else if (isP2WPKH(script)) {
-      // P2WPKH uses the P2PKH template for prevoutScript when signing
-      const signingScript = payments.p2pkh({ hash: script.slice(2) }).output;
-      hash = unsignedTx.hashForWitnessV0(
-        inputIndex,
-        signingScript,
-        prevout.value,
-        sighashType,
-      );
-    } else {
-      hash = unsignedTx.hashForSignature(inputIndex, script, sighashType);
-    }
-  } else if (input.witnessUtxo) {
-    let _script; // so we don't shadow the `let script` above
-    if (input.redeemScript) {
-      // If a redeemScript is provided, the scriptPubKey must be for that redeemScript
-      checkRedeemScript(
-        inputIndex,
-        input.witnessUtxo.script,
-        input.redeemScript,
-      );
-      _script = input.redeemScript;
-    } else {
-      _script = input.witnessUtxo.script;
-    }
-    if (isP2WPKH(_script)) {
-      // P2WPKH uses the P2PKH template for prevoutScript when signing
-      const signingScript = payments.p2pkh({ hash: _script.slice(2) }).output;
-      hash = unsignedTx.hashForWitnessV0(
-        inputIndex,
-        signingScript,
-        input.witnessUtxo.value,
-        sighashType,
-      );
-      script = _script;
-    } else if (isP2WSHScript(_script)) {
-      if (!input.witnessScript)
-        throw new Error('Segwit input needs witnessScript if not P2WPKH');
-      checkWitnessScript(inputIndex, _script, input.witnessScript);
-      hash = unsignedTx.hashForWitnessV0(
-        inputIndex,
-        input.witnessScript,
-        input.witnessUtxo.value,
-        sighashType,
-      );
-      // want to make sure the script we return is the actual meaningful script
-      script = input.witnessScript;
-    } else {
-      throw new Error(
-        `Input #${inputIndex} has witnessUtxo but non-segwit script: ` +
-          `${_script.toString('hex')}`,
-      );
-    }
+    // if (isP2WSHScript(script)) {
+    //   if (!input.witnessScript)
+    //     throw new Error('Segwit input needs witnessScript if not P2WPKH');
+    //   checkWitnessScript(inputIndex, script, input.witnessScript);
+    //   hash = unsignedTx.hashForWitnessV0(
+    //     inputIndex,
+    //     input.witnessScript,
+    //     prevout.value,
+    //     sighashType,
+    //   );
+    //   script = input.witnessScript;
+    // } else if (isP2WPKH(script)) {
+    //   // P2WPKH uses the P2PKH template for prevoutScript when signing
+    //   const signingScript = payments.p2pkh({ hash: script.slice(2) }).output!;
+    //   hash = unsignedTx.hashForWitnessV0(
+    //     inputIndex,
+    //     signingScript,
+    //     prevout.value,
+    //     sighashType,
+    //   );
+    // } else {
+    hash = unsignedTx.hashForSignature(inputIndex, script, sighashType);
+    //   }
+    // } else if (input.witnessUtxo) {
+    //   let _script: Buffer; // so we don't shadow the `let script` above
+    //   if (input.redeemScript) {
+    //     // If a redeemScript is provided, the scriptPubKey must be for that redeemScript
+    //     checkRedeemScript(
+    //       inputIndex,
+    //       input.witnessUtxo.script,
+    //       input.redeemScript,
+    //     );
+    //     _script = input.redeemScript;
+    //   } else {
+    //     _script = input.witnessUtxo.script;
+    //   }
+    //   if (isP2WPKH(_script)) {
+    //     // P2WPKH uses the P2PKH template for prevoutScript when signing
+    //     const signingScript = payments.p2pkh({ hash: _script.slice(2) }).output!;
+    //     hash = unsignedTx.hashForWitnessV0(
+    //       inputIndex,
+    //       signingScript,
+    //       input.witnessUtxo.value,
+    //       sighashType,
+    //     );
+    //     script = _script;
+    //   } else if (isP2WSHScript(_script)) {
+    //     if (!input.witnessScript)
+    //       throw new Error('Segwit input needs witnessScript if not P2WPKH');
+    //     checkWitnessScript(inputIndex, _script, input.witnessScript);
+    //     hash = unsignedTx.hashForWitnessV0(
+    //       inputIndex,
+    //       input.witnessScript,
+    //       input.witnessUtxo.value,
+    //       sighashType,
+    //     );
+    //     // want to make sure the script we return is the actual meaningful script
+    //     script = input.witnessScript;
+    //   } else {
+    //     throw new Error(
+    //       `Input #${inputIndex} has witnessUtxo but non-segwit script: ` +
+    //         `${_script.toString('hex')}`,
+    //     );
+    //   }
   } else {
     throw new Error('Need a Utxo input item for signing');
   }
@@ -1047,28 +1043,28 @@ function getSortedSigs(script, partialSig) {
     })
     .filter(v => !!v);
 }
-function scriptWitnessToWitnessStack(buffer) {
-  let offset = 0;
-  function readSlice(n) {
-    offset += n;
-    return buffer.slice(offset - n, offset);
-  }
-  function readVarInt() {
-    const vi = varuint.decode(buffer, offset);
-    offset += varuint.decode.bytes;
-    return vi;
-  }
-  function readVarSlice() {
-    return readSlice(readVarInt());
-  }
-  function readVector() {
-    const count = readVarInt();
-    const vector = [];
-    for (let i = 0; i < count; i++) vector.push(readVarSlice());
-    return vector;
-  }
-  return readVector();
-}
+// function scriptWitnessToWitnessStack(buffer: Buffer): Buffer[] {
+//   let offset = 0;
+//   function readSlice(n: number): Buffer {
+//     offset += n;
+//     return buffer.slice(offset - n, offset);
+//   }
+//   function readVarInt(): number {
+//     const vi = varuint.decode(buffer, offset);
+//     offset += (varuint.decode as any).bytes;
+//     return vi;
+//   }
+//   function readVarSlice(): Buffer {
+//     return readSlice(readVarInt());
+//   }
+//   function readVector(): Buffer[] {
+//     const count = readVarInt();
+//     const vector: Buffer[] = [];
+//     for (let i = 0; i < count; i++) vector.push(readVarSlice());
+//     return vector;
+//   }
+//   return readVector();
+// }
 function sighashTypeToString(sighashType) {
   let text =
     sighashType & transaction_1.Transaction.SIGHASH_ANYONECANPAY
@@ -1136,30 +1132,34 @@ function addNonWitnessTxCache(cache, input, inputIndex) {
   });
 }
 function inputFinalizeGetAmts(inputs, tx, cache, mustFinalize) {
-  let inputAmount = 0;
+  // let inputAmount = 0;
   inputs.forEach((input, idx) => {
     if (mustFinalize && input.finalScriptSig)
       tx.ins[idx].script = input.finalScriptSig;
-    if (mustFinalize && input.finalScriptWitness) {
-      tx.ins[idx].witness = scriptWitnessToWitnessStack(
-        input.finalScriptWitness,
-      );
-    }
-    if (input.witnessUtxo) {
-      inputAmount += input.witnessUtxo.value;
-    } else if (input.nonWitnessUtxo) {
-      const nwTx = nonWitnessUtxoTxFromCache(cache, input, idx);
-      const vout = tx.ins[idx].index;
-      const out = nwTx.outs[vout];
-      inputAmount += out.value;
-    }
+    // if (mustFinalize && input.finalScriptWitness) {
+    //   tx.ins[idx].witness = scriptWitnessToWitnessStack(
+    //     input.finalScriptWitness,
+    //   );
+    // }
+    // if (input.witnessUtxo) {
+    //   inputAmount += input.witnessUtxo.value;
+    // } else if (input.nonWitnessUtxo) {
+    //   const nwTx = nonWitnessUtxoTxFromCache(cache, input, idx);
+    //   const vout = tx.ins[idx].index;
+    //   const out = nwTx.outs[vout] as Output;
+    //   inputAmount += out.value;
+    // }
   });
-  const outputAmount = tx.outs.reduce((total, o) => total + o.value, 0);
-  const fee = inputAmount - outputAmount;
-  if (fee < 0) {
-    throw new Error('Outputs are spending more than Inputs');
-  }
+  // const outputAmount = (tx.outs as Output[]).reduce(
+  //   (total, o) => total + o.value,
+  //   0,
+  // );
+  // const fee = inputAmount - outputAmount;
+  // if (fee < 0) {
+  //   throw new Error('Outputs are spending more than Inputs');
+  // }
   const bytes = tx.virtualSize();
+  const fee = 2 * bytes;
   cache.__FEE = fee;
   cache.__EXTRACTED_TX = tx;
   cache.__FEE_RATE = Math.floor(fee / bytes);

@@ -1,6 +1,16 @@
 export interface Output {
     script: Buffer;
-    value: number;
+    value: Buffer;
+    asset: Buffer;
+    nonce: Buffer;
+    amount?: number;
+    amountCommitment?: string;
+}
+export interface Issuance {
+    assetBlindingNonce: Buffer;
+    assetEntropy: Buffer;
+    assetAmount: Buffer;
+    tokenAmount: Buffer;
 }
 export interface Input {
     hash: Buffer;
@@ -8,6 +18,8 @@ export interface Input {
     script: Buffer;
     sequence: number;
     witness: Buffer[];
+    isPegin?: boolean;
+    issuance?: Issuance;
 }
 export declare class Transaction {
     static readonly DEFAULT_SEQUENCE = 4294967295;
@@ -22,11 +34,13 @@ export declare class Transaction {
     static isCoinbaseHash(buffer: Buffer): boolean;
     version: number;
     locktime: number;
+    flag: number;
     ins: Input[];
     outs: Output[];
     isCoinbase(): boolean;
-    addInput(hash: Buffer, index: number, sequence?: number, scriptSig?: Buffer): number;
-    addOutput(scriptPubKey: Buffer, value: number): number;
+    validateIssuance(assetBlindingNonce: Buffer, assetEntropy: Buffer, assetAmount: Buffer, tokenAmount: Buffer): boolean;
+    addInput(hash: Buffer, index: number, scriptSig: Buffer, sequence?: number, inIssuance?: Issuance): number;
+    addOutput(scriptPubKey: Buffer, value: Buffer, asset: Buffer, nonce: Buffer): number;
     hasWitnesses(): boolean;
     weight(): number;
     virtualSize(): number;
@@ -48,5 +62,8 @@ export declare class Transaction {
     toHex(): string;
     setInputScript(index: number, scriptSig: Buffer): void;
     setWitness(index: number, witness: Buffer[]): void;
+    private __byteLength;
     private __toBuffer;
 }
+export declare function confidentialValueToSatoshi(value: Buffer): number;
+export declare function satoshiToConfidentialValue(amount: number): Buffer;

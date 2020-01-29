@@ -13,3 +13,4 @@ Released under the terms of the [MIT LICENSE](LICENSE).
 The below examples are implemented as integration tests (as in [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib#examples)).
 
 - [Generate a random Liquid address](./test/integration/addresses.spec.ts)
+- [Create a 1-to-1 Transaction](./test/integration/transaction.spec.ts)

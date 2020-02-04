@@ -16,6 +16,8 @@ export declare class BufferWriter {
     writeSlice(slice: Buffer): void;
     writeVarSlice(slice: Buffer): void;
     writeVector(vector: Buffer[]): void;
+    writeConfidentialInFields(input: any): void;
+    writeConfidentialOutFields(output: any): void;
 }
 /**
  * Helper class for reading of bitcoin data types from a buffer.
@@ -35,6 +37,8 @@ export declare class BufferReader {
     readConfidentialAsset(): Buffer;
     readConfidentialNonce(): Buffer;
     readConfidentialValue(): Buffer;
+    readConfidentialInFields(): any;
+    readConfidentialOutFields(): any;
     readIssuance(): {
         assetBlindingNonce: Buffer;
         assetEntropy: Buffer;

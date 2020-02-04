@@ -96,6 +96,22 @@ export class BufferWriter {
     this.writeVarInt(vector.length);
     vector.forEach((buf: Buffer) => this.writeVarSlice(buf));
   }
+
+  writeConfidentialInFields(input: any): void {
+    this.writeVarSlice(input.issuanceRangeProof);
+    this.writeVarSlice(input.inflationRangeProof);
+
+    this.writeVarInt(input.witness.length);
+    for (const it of input.witness) this.writeVarSlice(it);
+
+    this.writeVarInt(input.peginWitness.length);
+    for (const it of input.peginWitness) this.writeVarSlice(it);
+  }
+
+  writeConfidentialOutFields(output: any): void {
+    this.writeVarSlice(output.surjectionProof);
+    this.writeVarSlice(output.rangeProof);
+  }
 }
 
 /**
@@ -206,6 +222,25 @@ export class BufferReader {
         this.readSlice(CONFIDENTIAL_COMMITMENT - 1),
       ]);
     return versionBuffer;
+  }
+
+  readConfidentialInFields(): any {
+    const issuanceRangeProof = this.readVarSlice();
+    const inflationRangeProof = this.readVarSlice();
+    const witness = this.readVector();
+    const peginWitness = this.readVector();
+    return {
+      issuanceRangeProof,
+      inflationRangeProof,
+      witness,
+      peginWitness,
+    };
+  }
+
+  readConfidentialOutFields(): any {
+    const surjectionProof = this.readVarSlice();
+    const rangeProof = this.readVarSlice();
+    return { surjectionProof, rangeProof };
   }
 
   readIssuance(): {

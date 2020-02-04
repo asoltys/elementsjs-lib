@@ -566,7 +566,7 @@ class PsbtTransaction {
         ? bufferutils_1.reverseBuffer(Buffer.from(input.hash, 'hex'))
         : input.hash;
     const script = input.script ? input.script : Buffer.alloc(0);
-    this.tx.addInput(hash, input.index, script, input.sequence, input.issuance);
+    this.tx.addInput(hash, input.index, input.sequence, script, input.issuance);
   }
   addOutput(output) {
     if (

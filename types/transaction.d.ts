@@ -5,6 +5,8 @@ export interface Output {
     nonce: Buffer;
     amount?: number;
     amountCommitment?: string;
+    rangeProof?: Buffer;
+    surjectionProof?: Buffer;
 }
 export interface Issuance {
     assetBlindingNonce: Buffer;
@@ -20,6 +22,9 @@ export interface Input {
     witness: Buffer[];
     isPegin?: boolean;
     issuance?: Issuance;
+    peginWitness?: Buffer[];
+    issuanceRangeProof?: Buffer;
+    inflationRangeProof?: Buffer;
 }
 export declare class Transaction {
     static readonly DEFAULT_SEQUENCE = 4294967295;
@@ -39,8 +44,8 @@ export declare class Transaction {
     outs: Output[];
     isCoinbase(): boolean;
     validateIssuance(assetBlindingNonce: Buffer, assetEntropy: Buffer, assetAmount: Buffer, tokenAmount: Buffer): boolean;
-    addInput(hash: Buffer, index: number, scriptSig: Buffer, sequence?: number, inIssuance?: Issuance): number;
-    addOutput(scriptPubKey: Buffer, value: Buffer, asset: Buffer, nonce: Buffer): number;
+    addInput(hash: Buffer, index: number, sequence?: number, scriptSig?: Buffer, issuance?: Issuance): number;
+    addOutput(scriptPubKey: Buffer, value: Buffer, asset: Buffer, nonce: Buffer, rangeProof?: Buffer, surjectionProof?: Buffer): number;
     hasWitnesses(): boolean;
     weight(): number;
     virtualSize(): number;
@@ -55,13 +60,16 @@ export declare class Transaction {
      * This hash can then be used to sign the provided transaction input.
      */
     hashForSignature(inIndex: number, prevOutScript: Buffer, hashType: number): Buffer;
-    hashForWitnessV0(inIndex: number, prevOutScript: Buffer, value: number, hashType: number): Buffer;
+    hashForWitnessV0(inIndex: number, prevOutScript: Buffer, value: Buffer, hashType: number): Buffer;
     getHash(forWitness?: boolean): Buffer;
     getId(): string;
     toBuffer(buffer?: Buffer, initialOffset?: number): Buffer;
     toHex(): string;
     setInputScript(index: number, scriptSig: Buffer): void;
     setWitness(index: number, witness: Buffer[]): void;
+    setPeginWitness(index: number, peginWitness: Buffer[]): void;
+    setInputIssuanceRangeProof(index: number, issuanceRangeProof: Buffer): void;
+    setInputInflationRangeProof(index: number, inflationRangeProof: Buffer): void;
     private __byteLength;
     private __toBuffer;
 }

@@ -46,6 +46,8 @@ export interface Output {
   nonce: Buffer;
   amount?: number;
   amountCommitment?: string;
+  rangeProof?: Buffer;
+  surjectionProof?: Buffer;
 }
 
 export interface Issuance {
@@ -63,6 +65,9 @@ export interface Input {
   witness: Buffer[];
   isPegin?: boolean;
   issuance?: Issuance;
+  peginWitness?: Buffer[];
+  issuanceRangeProof?: Buffer;
+  inflationRangeProof?: Buffer;
 }
 
 export class Transaction {
@@ -79,8 +84,6 @@ export class Transaction {
     const tx = new Transaction();
     tx.version = bufferReader.readInt32();
     tx.flag = bufferReader.readUInt8();
-
-    // const hasWitnesses = tx.flag === Transaction.ADVANCED_TRANSACTION_FLAG;
 
     const vinLen = bufferReader.readVarInt();
     for (let i = 0; i < vinLen; ++i) {
@@ -109,33 +112,58 @@ export class Transaction {
         witness: EMPTY_WITNESS,
         isPegin: inIsPegin,
         issuance: inIssuance,
+        peginWitness: EMPTY_WITNESS,
+        issuanceRangeProof: EMPTY_SCRIPT,
+        inflationRangeProof: EMPTY_SCRIPT,
       });
     }
     const voutLen = bufferReader.readVarInt();
     for (let i = 0; i < voutLen; ++i) {
-      const assetBuffer = bufferReader.readConfidentialAsset();
-      const outValueBuffer = bufferReader.readConfidentialValue();
+      const asset = bufferReader.readConfidentialAsset();
+      const value = bufferReader.readConfidentialValue();
+      const nonce = bufferReader.readConfidentialNonce();
+      const script = bufferReader.readVarSlice();
 
-      let outAmountCommitment: string | undefined;
-      let outAmount: number | undefined;
+      let amountCommitment: string | undefined;
+      let amount: number | undefined;
 
-      if (isUncofnidentialValue(outValueBuffer)) {
-        outAmount = confidentialValueToSatoshi(outValueBuffer);
-      } else outAmountCommitment = outValueBuffer.toString('hex');
+      if (isUnconfidentialValue(value)) {
+        amount = confidentialValueToSatoshi(value);
+      } else amountCommitment = value.toString('hex');
 
       tx.outs.push({
-        asset: assetBuffer,
-        value: outValueBuffer,
-        nonce: bufferReader.readConfidentialNonce(),
-        script: bufferReader.readVarSlice(),
-        amount: outAmount,
-        amountCommitment: outAmountCommitment,
+        asset,
+        value,
+        nonce,
+        script,
+        amount,
+        amountCommitment,
+        rangeProof: EMPTY_SCRIPT,
+        surjectionProof: EMPTY_SCRIPT,
       });
     }
     tx.locktime = bufferReader.readUInt32();
     if (tx.flag === 1) {
       for (let i = 0; i < vinLen; ++i) {
-        tx.ins[i].witness = bufferReader.readVector();
+        const {
+          witness,
+          peginWitness,
+          issuanceRangeProof,
+          inflationRangeProof,
+        } = bufferReader.readConfidentialInFields();
+        tx.ins[i].witness = witness;
+        tx.ins[i].peginWitness = peginWitness;
+        tx.ins[i].issuanceRangeProof = issuanceRangeProof;
+        tx.ins[i].inflationRangeProof = inflationRangeProof;
+      }
+
+      for (let i = 0; i < voutLen; ++i) {
+        const {
+          rangeProof,
+          surjectionProof,
+        } = bufferReader.readConfidentialOutFields();
+        tx.outs[i].rangeProof = rangeProof;
+        tx.outs[i].surjectionProof = surjectionProof;
       }
 
       // was this pointless?
@@ -205,43 +233,39 @@ export class Transaction {
   addInput(
     hash: Buffer,
     index: number,
-    scriptSig: Buffer,
     sequence?: number,
-    inIssuance?: Issuance,
+    scriptSig?: Buffer,
+    issuance?: Issuance,
   ): number {
     typeforce(
       types.tuple(
         types.Hash256bit,
         types.UInt32,
-        types.Buffer,
         types.maybe(types.UInt32),
+        types.maybe(types.Buffer),
         types.maybe(types.Object),
       ),
       arguments,
     );
 
-    if (types.Null(sequence)) {
-      sequence = Transaction.DEFAULT_SEQUENCE;
-    }
-
-    let inIsPegin = false;
+    let isPegin = false;
 
     if (index !== MINUS_1) {
       if (index & OUTPOINT_ISSUANCE_FLAG) {
-        if (!inIssuance) {
+        if (!issuance) {
           throw new Error(
             'Issuance flag has been set but the Issuance object is not defined or invalid',
           );
         } else
           this.validateIssuance(
-            inIssuance.assetBlindingNonce,
-            inIssuance.assetEntropy,
-            inIssuance.assetAmount,
-            inIssuance.tokenAmount,
+            issuance.assetBlindingNonce,
+            issuance.assetEntropy,
+            issuance.assetAmount,
+            issuance.tokenAmount,
           );
       }
       if (index & OUTPOINT_PEGIN_FLAG) {
-        inIsPegin = true;
+        isPegin = true;
       }
       index &= OUTPOINT_INDEX_MASK;
     }
@@ -251,11 +275,14 @@ export class Transaction {
       this.ins.push({
         hash,
         index,
-        script: scriptSig || EMPTY_SCRIPT,
-        sequence: sequence as number,
+        isPegin,
+        issuance,
         witness: EMPTY_WITNESS,
-        isPegin: inIsPegin as boolean,
-        issuance: inIssuance,
+        peginWitness: EMPTY_WITNESS,
+        issuanceRangeProof: EMPTY_SCRIPT,
+        inflationRangeProof: EMPTY_SCRIPT,
+        script: scriptSig || EMPTY_SCRIPT,
+        sequence: sequence || Transaction.DEFAULT_SEQUENCE,
       }) - 1
     );
   }
@@ -265,6 +292,8 @@ export class Transaction {
     value: Buffer,
     asset: Buffer,
     nonce: Buffer,
+    rangeProof?: Buffer,
+    surjectionProof?: Buffer,
   ): number {
     typeforce(
       types.tuple(
@@ -276,6 +305,8 @@ export class Transaction {
         ),
         types.oneOf(types.ConfidentialCommitment, types.BufferOne),
         types.oneOf(types.ConfidentialCommitment, types.BufferOne),
+        types.maybe(types.Buffer),
+        types.maybe(types.Buffer),
       ),
       arguments,
     );
@@ -287,6 +318,8 @@ export class Transaction {
         value,
         asset,
         nonce,
+        rangeProof: rangeProof || EMPTY_SCRIPT,
+        surjectionProof: surjectionProof || EMPTY_SCRIPT,
       }) - 1
     );
   }
@@ -331,6 +364,9 @@ export class Transaction {
         witness: txIn.witness,
         isPegin: txIn.isPegin,
         issuance: txIn.issuance,
+        peginWitness: txIn.peginWitness,
+        issuanceRangeProof: txIn.issuanceRangeProof,
+        inflationRangeProof: txIn.inflationRangeProof,
       };
     });
 
@@ -342,6 +378,8 @@ export class Transaction {
         nonce: txOut.nonce,
         amount: (txOut as Output).amount,
         amountCommitment: (txOut as Output).amountCommitment,
+        rangeProof: txOut.rangeProof,
+        surjectionProof: txOut.surjectionProof,
       };
     });
 
@@ -437,117 +475,163 @@ export class Transaction {
   hashForWitnessV0(
     inIndex: number,
     prevOutScript: Buffer,
-    value: number,
+    value: Buffer,
     hashType: number,
   ): Buffer {
     typeforce(
-      types.tuple(types.UInt32, types.Buffer, types.Satoshi, types.UInt32),
+      types.tuple(types.UInt32, types.Buffer, types.Buffer, types.UInt32),
       arguments,
     );
 
-    let tbuffer: Buffer = Buffer.from([]);
-    let toffset: number = 0;
+    function writeInputs(ins: Input[]): Buffer {
+      const tBuffer: Buffer = Buffer.allocUnsafe(36 * ins.length);
+      const tBufferWriter: BufferWriter = new BufferWriter(tBuffer, 0);
 
-    function writeSlice(slice: Buffer): void {
-      toffset += slice.copy(tbuffer, toffset);
+      ins.forEach((txIn: Input) => {
+        tBufferWriter.writeSlice(txIn.hash);
+        tBufferWriter.writeUInt32(txIn.index);
+      });
+
+      return bcrypto.hash256(tBuffer);
     }
 
-    function writeUInt32(i: number): void {
-      toffset = tbuffer.writeUInt32LE(i, toffset);
+    function writeSequences(ins: Input[]): Buffer {
+      const tBuffer: Buffer = Buffer.allocUnsafe(4 * ins.length);
+      const tBufferWriter: BufferWriter = new BufferWriter(tBuffer, 0);
+
+      ins.forEach((txIn: Input) => {
+        tBufferWriter.writeUInt32(txIn.sequence);
+      });
+
+      return bcrypto.hash256(tBuffer);
     }
 
-    function writeUInt64(i: number): void {
-      toffset = bufferutils.writeUInt64LE(tbuffer, i, toffset);
+    function writeIssuances(ins: Input[]): Buffer {
+      const issuanceSize = ins.reduce(
+        (sum, txIn) =>
+          !types.Null(txIn.issuance)
+            ? sum +
+              txIn.issuance!.assetBlindingNonce.length +
+              txIn.issuance!.assetEntropy.length +
+              txIn.issuance!.assetAmount.length +
+              txIn.issuance!.tokenAmount.length
+            : sum + 1, // we'll use the empty 00 Buffer if issuance is not set
+        0,
+      );
+      const tBuffer: Buffer = Buffer.allocUnsafe(issuanceSize);
+      const tBufferWriter: BufferWriter = new BufferWriter(tBuffer, 0);
+
+      ins.forEach((txIn: Input) => {
+        if (!types.Null(txIn.issuance)) {
+          tBufferWriter.writeSlice(txIn.issuance!.assetBlindingNonce);
+          tBufferWriter.writeSlice(txIn.issuance!.assetEntropy);
+          tBufferWriter.writeSlice(txIn.issuance!.assetAmount);
+          tBufferWriter.writeSlice(txIn.issuance!.tokenAmount);
+        } else {
+          tBufferWriter.writeSlice(Buffer.from('00', 'hex'));
+        }
+      });
+      return bcrypto.hash256(tBuffer);
     }
 
-    function writeVarInt(i: number): void {
-      varuint.encode(i, tbuffer, toffset);
-      toffset += varuint.encode.bytes;
-    }
+    function writeOutputs(outs: Output[]): Buffer {
+      const outsSize = outs.reduce(
+        (sum: number, txOut: Output) =>
+          sum +
+          txOut.asset.length +
+          txOut.value.length +
+          txOut.nonce.length +
+          varSliceSize(txOut.script),
+        0,
+      );
 
-    function writeVarSlice(slice: Buffer): void {
-      writeVarInt(slice.length);
-      writeSlice(slice);
+      const tBuffer: Buffer = Buffer.allocUnsafe(outsSize);
+      const tBufferWriter: BufferWriter = new BufferWriter(tBuffer, 0);
+
+      outs.forEach((txOut: Output) => {
+        tBufferWriter.writeSlice(txOut.asset);
+        tBufferWriter.writeSlice(txOut.value);
+        tBufferWriter.writeSlice(txOut.nonce);
+        tBufferWriter.writeVarSlice(txOut.script);
+      });
+      return bcrypto.hash256(tBuffer);
     }
 
     let hashOutputs = ZERO;
     let hashPrevouts = ZERO;
-    let hashSequence = ZERO;
+    let hashSequences = ZERO;
+    let hashIssuances = ZERO;
 
+    // Inputs
     if (!(hashType & Transaction.SIGHASH_ANYONECANPAY)) {
-      tbuffer = Buffer.allocUnsafe(36 * this.ins.length);
-      toffset = 0;
-
-      this.ins.forEach(txIn => {
-        writeSlice(txIn.hash);
-        writeUInt32(txIn.index);
-      });
-
-      hashPrevouts = bcrypto.hash256(tbuffer);
+      hashPrevouts = writeInputs(this.ins);
     }
 
+    // Sequences
     if (
       !(hashType & Transaction.SIGHASH_ANYONECANPAY) &&
       (hashType & 0x1f) !== Transaction.SIGHASH_SINGLE &&
       (hashType & 0x1f) !== Transaction.SIGHASH_NONE
     ) {
-      tbuffer = Buffer.allocUnsafe(4 * this.ins.length);
-      toffset = 0;
-
-      this.ins.forEach(txIn => {
-        writeUInt32(txIn.sequence);
-      });
-
-      hashSequence = bcrypto.hash256(tbuffer);
+      hashSequences = writeSequences(this.ins);
     }
 
+    // Issuances
+    if (!(hashType & Transaction.SIGHASH_ANYONECANPAY)) {
+      hashIssuances = writeIssuances(this.ins);
+    }
+
+    // Outputs
     if (
       (hashType & 0x1f) !== Transaction.SIGHASH_SINGLE &&
       (hashType & 0x1f) !== Transaction.SIGHASH_NONE
     ) {
-      const txOutsSize = this.outs.reduce((sum, output) => {
-        return sum + 8 + varSliceSize(output.script);
-      }, 0);
-
-      tbuffer = Buffer.allocUnsafe(txOutsSize);
-      toffset = 0;
-
-      this.outs.forEach(out => {
-        writeUInt64(out.amount!);
-        writeVarSlice(out.script);
-      });
-
-      hashOutputs = bcrypto.hash256(tbuffer);
+      hashOutputs = writeOutputs(this.outs);
     } else if (
       (hashType & 0x1f) === Transaction.SIGHASH_SINGLE &&
       inIndex < this.outs.length
     ) {
-      const output = this.outs[inIndex];
-
-      tbuffer = Buffer.allocUnsafe(8 + varSliceSize(output.script));
-      toffset = 0;
-      writeUInt64(output.amount!);
-      writeVarSlice(output.script);
-
-      hashOutputs = bcrypto.hash256(tbuffer);
+      hashOutputs = writeOutputs([this.outs[inIndex]]);
     }
 
-    tbuffer = Buffer.allocUnsafe(156 + varSliceSize(prevOutScript));
-    toffset = 0;
-
     const input = this.ins[inIndex];
-    writeUInt32(this.version);
-    writeSlice(hashPrevouts);
-    writeSlice(hashSequence);
-    writeSlice(input.hash);
-    writeUInt32(input.index);
-    writeVarSlice(prevOutScript);
-    writeUInt64(value);
-    writeUInt32(input.sequence);
-    writeSlice(hashOutputs);
-    writeUInt32(this.locktime);
-    writeUInt32(hashType);
-    return bcrypto.hash256(tbuffer);
+    const bufferSize =
+      4 + // version
+      hashPrevouts.length +
+      hashSequences.length +
+      hashIssuances.length +
+      input.hash.length +
+      4 + // input.index
+      varSliceSize(prevOutScript) +
+      value.length +
+      4 + // input.sequence
+      hashOutputs.length +
+      4 + // locktime
+      4; // hashType
+
+    const buffer: Buffer = Buffer.allocUnsafe(bufferSize);
+    const bufferWriter: BufferWriter = new BufferWriter(buffer, 0);
+
+    bufferWriter.writeUInt32(this.version);
+    bufferWriter.writeSlice(hashPrevouts);
+    bufferWriter.writeSlice(hashSequences);
+    bufferWriter.writeSlice(hashIssuances);
+    bufferWriter.writeSlice(input.hash);
+    bufferWriter.writeUInt32(input.index);
+    bufferWriter.writeVarSlice(prevOutScript);
+    bufferWriter.writeSlice(value);
+    bufferWriter.writeUInt32(input.sequence);
+    if (!types.Null(input.issuance)) {
+      bufferWriter.writeSlice(input.issuance!.assetBlindingNonce);
+      bufferWriter.writeSlice(input.issuance!.assetEntropy);
+      bufferWriter.writeSlice(input.issuance!.assetAmount);
+      bufferWriter.writeSlice(input.issuance!.tokenAmount);
+    }
+    bufferWriter.writeSlice(hashOutputs);
+    bufferWriter.writeUInt32(this.locktime);
+    bufferWriter.writeUInt32(hashType);
+
+    return bcrypto.hash256(buffer);
   }
 
   getHash(forWitness?: boolean): Buffer {
@@ -583,11 +667,34 @@ export class Transaction {
     this.ins[index].witness = witness;
   }
 
+  setPeginWitness(index: number, peginWitness: Buffer[]): void {
+    typeforce(types.tuple(types.Number, [types.Buffer]), arguments);
+
+    this.ins[index].peginWitness = peginWitness;
+  }
+
+  setInputIssuanceRangeProof(index: number, issuanceRangeProof: Buffer): void {
+    typeforce(types.tuple(types.Buffer), arguments);
+    if (this.ins[index].issuance === undefined)
+      throw new Error('Issuance not set for input #' + index);
+    this.ins[index].issuanceRangeProof = issuanceRangeProof;
+  }
+
+  setInputInflationRangeProof(
+    index: number,
+    inflationRangeProof: Buffer,
+  ): void {
+    typeforce(types.tuple(types.Buffer), arguments);
+    if (this.ins[index].issuance === undefined)
+      throw new Error('Issuance not set for input #' + index);
+    this.ins[index].inflationRangeProof = inflationRangeProof;
+  }
+
   private __byteLength(
     _ALLOW_WITNESS: boolean,
     forSignature?: boolean,
   ): number {
-    // const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
+    const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
     return (
       8 +
       (forSignature ? 0 : 1) +
@@ -613,7 +720,33 @@ export class Transaction {
           output.nonce.length +
           varSliceSize(output.script)
         );
-      }, 0)
+      }, 0) +
+      (hasWitnesses
+        ? this.ins.reduce((sum, input) => {
+            return (
+              sum +
+              varSliceSize(input.issuanceRangeProof!) +
+              varSliceSize(input.inflationRangeProof!) +
+              varuint.encodingLength(input.witness.length) +
+              input.witness.reduce((scriptSum, scriptWit) => {
+                return scriptSum + varSliceSize(scriptWit);
+              }, 0) +
+              varuint.encodingLength(input.peginWitness!.length) +
+              input.peginWitness!.reduce((peginSum, peginWit) => {
+                return peginSum + varSliceSize(peginWit);
+              }, 0)
+            );
+          }, 0)
+        : 0) +
+      (hasWitnesses
+        ? this.outs.reduce((sum, output) => {
+            return (
+              sum +
+              varSliceSize(output.surjectionProof!) +
+              varSliceSize(output.rangeProof!)
+            );
+          }, 0)
+        : 0)
     );
   }
 
@@ -635,13 +768,13 @@ export class Transaction {
 
     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
     if (!forSignature) {
-      bufferWriter.writeUInt8(this.flag);
+      if (
+        hasWitnesses &&
+        (forceZeroFlag === false || forceZeroFlag === undefined)
+      )
+        bufferWriter.writeUInt8(Transaction.ADVANCED_TRANSACTION_FLAG);
+      else bufferWriter.writeUInt8(Transaction.ADVANCED_TRANSACTION_MARKER);
     }
-    // if (hasWitnesses) {
-    //   writeUInt8(Transaction.ADVANCED_TRANSACTION_FLAG);
-    // } else  {
-    //   writeUInt8(Transaction.ADVANCED_TRANSACTION_MARKER)
-    // }
 
     bufferWriter.writeVarInt(this.ins.length);
 
@@ -680,8 +813,11 @@ export class Transaction {
     bufferWriter.writeUInt32(this.locktime);
 
     if (hasWitnesses) {
-      this.ins.forEach(input => {
-        bufferWriter.writeVector(input.witness);
+      this.ins.forEach((input: Input) => {
+        bufferWriter.writeConfidentialInFields(input);
+      });
+      this.outs.forEach((output: Output) => {
+        bufferWriter.writeConfidentialOutFields(output);
       });
     }
 
@@ -712,6 +848,6 @@ export function satoshiToConfidentialValue(amount: number): Buffer {
   return Buffer.concat([unconfPrefix, reverseBuffer(valueBuffer)]);
 }
 
-function isUncofnidentialValue(value: Buffer): boolean {
+function isUnconfidentialValue(value: Buffer): boolean {
   return value.length === CONFIDENTIAL_VALUE && value.readUIntLE(0, 1) === 1;
 }

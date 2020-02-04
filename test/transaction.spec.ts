@@ -5,9 +5,7 @@ const fixtures = require('./fixtures/transaction');
 const {
   Transaction,
   satoshiToConfidentialValue,
-  // confidentialValueToSatoshi
 } = require('../src/transaction');
-// const BufferUtils = require('../src/bufferutils')
 
 const emptyNonce = Buffer.from('00', 'hex');
 
@@ -19,7 +17,7 @@ describe('Transaction', () => {
 
     if (raw.flag) tx.flag = raw.flag;
 
-    raw.ins.forEach((txIn: any) => {
+    raw.ins.forEach((txIn: any, i: number) => {
       const txHash = Buffer.from(txIn.hash, 'hex').reverse();
       let scriptSig;
       let issuance;
@@ -40,7 +38,19 @@ describe('Transaction', () => {
         };
       }
 
-      tx.addInput(txHash, txIn.index, scriptSig, txIn.sequence, issuance);
+      tx.addInput(txHash, txIn.index, txIn.sequence, scriptSig, issuance);
+
+      if (txIn.witness) {
+        const witness = txIn.witness.map((x: string) => Buffer.from(x, 'hex'));
+        tx.setWitness(i, witness);
+      }
+
+      if (txIn.peginWitness) {
+        const peginWitness = txIn.peginWitness.map((x: string) =>
+          Buffer.from(x, 'hex'),
+        );
+        tx.setWitness(i, peginWitness);
+      }
     });
 
     raw.outs.forEach((txOut: any) => {
@@ -48,57 +58,29 @@ describe('Transaction', () => {
         Buffer.from('01', 'hex'),
         Buffer.from(txOut.asset, 'hex').reverse(),
       ]);
-      let script = Buffer.allocUnsafe(0);
-      if (txOut.script.length > 0) {
-        script = bscript.fromASM(txOut.script);
-      }
-      let nonce = Buffer.from('00', 'hex');
-      if (txOut.nonce.length > 0) {
-        nonce = Buffer.from(txOut.nonce, 'hex');
-      }
-
+      const script =
+        txOut.script.length > 0
+          ? bscript.fromASM(txOut.script)
+          : Buffer.allocUnsafe(0);
+      const nonce =
+        txOut.nonce.length > 0 ? Buffer.from(txOut.nonce, 'hex') : emptyNonce;
+      const rangeProof = txOut.rangeProof
+        ? Buffer.from(txOut.rangeProof, 'hex')
+        : undefined;
+      const surjectionProof = txOut.surjectionProof
+        ? Buffer.from(txOut.surjectionProof, 'hex')
+        : undefined;
       let value;
-      if (txOut.hasOwnProperty('amount')) {
+      if (txOut.hasOwnProperty('value')) {
+        value = Buffer.from(txOut.value, 'hex');
+      } else if (txOut.hasOwnProperty('amount')) {
         value = satoshiToConfidentialValue(txOut.amount);
       } else {
         value = Buffer.from(txOut.amountCommitment, 'hex');
       }
-      tx.addOutput(script, value, asset, nonce);
+      tx.addOutput(script, value, asset, nonce, rangeProof, surjectionProof);
     });
 
-    const witnessIn = [];
-    const witnessOut = [];
-
-    if (raw.witnessIn) {
-      for (const witIn of raw.witnessIn) {
-        const scriptWitness = [];
-        const peginWitness = [];
-        for (const sWit of witIn.scriptWitness) {
-          scriptWitness.push(Buffer.from(sWit, 'hex'));
-        }
-        for (const pWit of witIn.peginWitness) {
-          peginWitness.push(Buffer.from(pWit, 'hex'));
-        }
-        witnessIn.push({
-          issuanceRangeProof: Buffer.from(witIn.issuanceRangeProof, 'hex'),
-          inflationRangeProof: Buffer.from(witIn.inflationRangeProof, 'hex'),
-          scriptWitness,
-          peginWitness,
-        });
-      }
-    }
-
-    if (raw.witnessOut) {
-      for (const witOut of raw.witnessOut) {
-        witnessOut.push({
-          surjectionProof: Buffer.from(witOut.surjectionProof, 'hex'),
-          rangeProof: Buffer.from(witOut.rangeProof, 'hex'),
-        });
-      }
-    }
-
-    tx.witnessIn = witnessIn;
-    tx.witnessOut = witnessOut;
     return tx;
   }
 
@@ -115,6 +97,7 @@ describe('Transaction', () => {
 
     fixtures.valid.forEach(importExport);
     fixtures.hashForSignature.forEach(importExport);
+    fixtures.hashForWitnessV0.forEach(importExport);
 
     fixtures.invalid.fromBuffer.forEach((f: any) => {
       it('throws on ' + f.exception, () => {
@@ -188,13 +171,19 @@ describe('Transaction', () => {
 
     it('returns an index', () => {
       const tx = new Transaction();
-      assert.strictEqual(tx.addInput(prevTxHash, 0, Buffer.alloc(0)), 0);
-      assert.strictEqual(tx.addInput(prevTxHash, 0, Buffer.alloc(0)), 1);
+      assert.strictEqual(
+        tx.addInput(prevTxHash, 0, undefined, Buffer.alloc(0)),
+        0,
+      );
+      assert.strictEqual(
+        tx.addInput(prevTxHash, 0, undefined, Buffer.alloc(0)),
+        1,
+      );
     });
 
     it('defaults to empty script, 0xffffffff SEQUENCE number', () => {
       const tx = new Transaction();
-      tx.addInput(prevTxHash, 0, Buffer.alloc(0));
+      tx.addInput(prevTxHash, 0, undefined, Buffer.alloc(0));
 
       assert.strictEqual(tx.ins[0].script.length, 0);
       assert.strictEqual(tx.ins[0].sequence, 0xffffffff);
@@ -206,7 +195,7 @@ describe('Transaction', () => {
         const hash = Buffer.from(f.hash, 'hex');
 
         assert.throws(() => {
-          tx.addInput(hash, f.index, Buffer.alloc(0));
+          tx.addInput(hash, f.index, undefined, Buffer.alloc(0));
         }, new RegExp(f.exception));
       });
     });
@@ -265,7 +254,7 @@ describe('Transaction', () => {
   describe('getHash/getId', () => {
     function verify(f: any): void {
       it('should return the id for ' + f.id + '(' + f.description + ')', () => {
-        const tx = Transaction.fromHex(f.hex);
+        const tx = Transaction.fromHex(f.whex || f.hex);
 
         assert.strictEqual(tx.getHash().toString('hex'), f.hash);
         assert.strictEqual(tx.getId(), f.id);
@@ -307,6 +296,7 @@ describe('Transaction', () => {
           'hex',
         ),
         0,
+        undefined,
         Buffer.alloc(0),
       );
       tx.addOutput(
@@ -347,6 +337,28 @@ describe('Transaction', () => {
           const script = bscript.fromASM(f.script);
           assert.strictEqual(
             tx.hashForSignature(f.inIndex, script, f.type).toString('hex'),
+            f.hash,
+          );
+        },
+      );
+    });
+  });
+
+  describe('hashForWitnessV0', () => {
+    fixtures.hashForWitnessV0.forEach((f: any) => {
+      it(
+        'should return ' +
+          f.hash +
+          ' for ' +
+          (f.description ? 'case "' + f.description + '"' : ''),
+        () => {
+          const tx = Transaction.fromHex(f.txHex);
+          const script = bscript.fromASM(f.script);
+          const value = satoshiToConfidentialValue(f.amount);
+          assert.strictEqual(
+            tx
+              .hashForWitnessV0(f.inIndex, script, value, f.type)
+              .toString('hex'),
             f.hash,
           );
         },

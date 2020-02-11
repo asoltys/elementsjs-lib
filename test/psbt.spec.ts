@@ -74,6 +74,23 @@ describe('Psbt', () => {
               ) {
                 data.redeemScript = Buffer.from(data.redeemScript, 'hex');
               }
+              if (
+                typeof data === 'object' &&
+                data.hasOwnProperty('witnessUtxo')
+              ) {
+                data.witnessUtxo.script = Buffer.from(
+                  data.witnessUtxo.script,
+                  'hex',
+                );
+                data.witnessUtxo.value = satoshiToConfidentialValue(
+                  data.witnessUtxo.amount,
+                );
+                data.witnessUtxo.nonce = Buffer.from('00', 'hex');
+                data.witnessUtxo.asset = Buffer.concat([
+                  Buffer.from('01', 'hex'),
+                  Buffer.from(data.witnessUtxo.asset, 'hex').reverse(),
+                ]);
+              }
               (psbt as any)[`update${txt}`](i, data);
             }
           }
@@ -387,7 +404,12 @@ describe('Psbt', () => {
             '0014d85c2b71d0060b09c9886aeb815e50991dda124d',
             'hex',
           ),
-          value: 2e5,
+          value: satoshiToConfidentialValue(2e5),
+          nonce: Buffer.from('00', 'hex'),
+          asset: Buffer.concat([
+            Buffer.from('01', 'hex'),
+            Buffer.from(NETWORKS.regtest.assetHash, 'hex').reverse(),
+          ]),
         },
       });
       assert.throws(() => {

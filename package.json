@@ -50,7 +50,7 @@
   "dependencies": {
     "axios": "^0.19.2",
     "bech32": "^1.1.2",
-    "bip174": "^1.0.1",
+    "bip174": "github:vulpemventures/bip174",
     "bip32": "^2.0.4",
     "bip66": "^1.1.0",
     "bitcoin-ops": "^1.4.0",

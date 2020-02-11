@@ -14,3 +14,4 @@ The below examples are implemented as integration tests (as in [bitcoinjs-lib](h
 
 - [Generate a random Liquid address](./test/integration/addresses.spec.ts)
 - [Create a 1-to-1 Transaction](./test/integration/transaction.spec.ts)
+- [Create a 1-to-1 Transaction, w/ P2SH(P2WPKH)](./test/integration/transaction.spec.ts#L99)

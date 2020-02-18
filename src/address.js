@@ -5,91 +5,9 @@ const payments = require('./payments');
 const bscript = require('./script');
 const types = require('./types');
 const bech32 = require('bech32');
+const blech32 = require('blech32');
 const bs58check = require('bs58check');
 const typeforce = require('typeforce');
-function findAddressType(address, network) {
-  // TODO: native segwit
-  if (address.startsWith('el') || address.startsWith('ert'))
-    throw new TypeError('Native segwit is not supported yet');
-  const payload = bs58check.decode(address);
-  // Check if length matches uncofindetial or confidential address
-  if (payload.length !== 21 && payload.length !== 55)
-    throw new TypeError(address + ' is invalid');
-  // For an unconfidential address the first byte defines its type.
-  // For a confidential address, the first byte contains the blinding prefix,
-  // while the second byte contains the address type
-  const prefix = payload.readUInt8(0);
-  if (prefix === network.confidentialPrefix)
-    return { confidential: true, version: payload.readUInt8(1) };
-  return { confidential: false, version: prefix };
-}
-exports.findAddressType = findAddressType;
-function blindingPubKeyFromConfidentialAddress(address) {
-  if (address.startsWith('el') || address.startsWith('ert'))
-    throw new TypeError('Native segwit is not support yet');
-  const payload = bs58check.decode(address);
-  // Confidential addresses have fixed length
-  if (payload.length < 55) throw new TypeError(address + ' is too short');
-  if (payload.length > 55) throw new TypeError(address + ' is too long');
-  // Blinded decoded haddress has the form:
-  // BLIND_PREFIX|ADDRESS_PREFIX|BLIND_KEY|SCRIPT_HASH
-  // Prefixes are 1 byte long, thus blinding key always starts at 3rd byte
-  return payload.slice(2, 35);
-}
-exports.blindingPubKeyFromConfidentialAddress = blindingPubKeyFromConfidentialAddress;
-function confidentialAddressFromAddress(address, blindkey, network) {
-  if (address.startsWith(network.bech32))
-    throw new TypeError('Native segwit is not supported yet');
-  const payload = bs58check.decode(address);
-  const prefix = payload.readUInt8(0);
-  // Check if address has valid length and prefix
-  if (
-    payload.length !== 21 ||
-    (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
-  )
-    throw new TypeError(address + 'is not valid');
-  // Check if blind key has valid length
-  const rawBlindkey = Buffer.from(blindkey, 'hex');
-  if (rawBlindkey.length < 33) throw new TypeError(blindkey + 'is too short');
-  if (rawBlindkey.length > 33) throw new TypeError(blindkey + 'is too long');
-  const prefixBuf = new Uint8Array(2);
-  prefixBuf[0] = network.confidentialPrefix;
-  prefixBuf[1] = prefix;
-  const confidentialAddress = Buffer.concat([
-    prefixBuf,
-    rawBlindkey,
-    Buffer.from(payload.slice(1)),
-  ]);
-  return bs58check.encode(confidentialAddress);
-}
-exports.confidentialAddressFromAddress = confidentialAddressFromAddress;
-function confidentialAddressToAddress(address, network) {
-  const payload = bs58check.decode(address);
-  const prefix = payload.readUInt8(1);
-  // Check if address has valid length and prefix
-  if (
-    payload.length !== 55 ||
-    (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
-  )
-    throw new TypeError(address + 'is not valid');
-  // Check if length matches confidential address
-  if (payload.length < 55) throw new TypeError(address + ' is too short');
-  if (payload.length > 55) throw new TypeError(address + ' is too long');
-  const unconfidential = payload.slice(35, payload.length);
-  // 0x39 is address version on Liquid v1 network for P2PKH address
-  // 0xEB is address version on Liquid v1 regtest network for P2PKH address
-  // ToDo: 0x27 is address version on Liquid v1 network for P2SH address
-  // ToDo: 0x4B is address version on Liquid v1 regtest network for P2SH address
-  const versionBuf = new Uint8Array(1);
-  versionBuf[0] = prefix;
-  const unconfidentialAddressBuffer = Buffer.concat([
-    versionBuf,
-    unconfidential,
-  ]);
-  const unconfidentialAddress = bs58check.encode(unconfidentialAddressBuffer);
-  return unconfidentialAddress;
-}
-exports.confidentialAddressToAddress = confidentialAddressToAddress;
 function fromBase58Check(address) {
   const payload = bs58check.decode(address);
   // TODO: 4.0.0, move to "toOutputScript"
@@ -110,6 +28,26 @@ function fromBech32(address) {
   };
 }
 exports.fromBech32 = fromBech32;
+function fromBlech32(address) {
+  const prefix = address.substring(0, 2);
+  const result = blech32.decode(prefix, address);
+  const pubkey = result.words.slice(0, 33);
+  const prg = result.words.slice(33);
+  const data = Buffer.concat([Buffer.from([result.version, prg.length]), prg]);
+  return {
+    version: result.version,
+    pubkey,
+    data,
+  };
+}
+exports.fromBlech32 = fromBlech32;
+function fromConfidential(address) {
+  const network = getNetwork(address);
+  if (address.startsWith(network.blech32))
+    return fromConfidentialSegwit(address, network);
+  return fromConfidentialLegacy(address, network);
+}
+exports.fromConfidential = fromConfidential;
 function toBase58Check(hash, version) {
   typeforce(types.tuple(types.Hash160bit, types.UInt8), arguments);
   const payload = Buffer.allocUnsafe(21);
@@ -124,6 +62,18 @@ function toBech32(data, version, prefix) {
   return bech32.encode(prefix, words);
 }
 exports.toBech32 = toBech32;
+function toBlech32(data, pubkey, prefix) {
+  const words = Buffer.concat([pubkey, data.slice(2)]);
+  return blech32.encode(prefix, words);
+}
+exports.toBlech32 = toBlech32;
+function toConfidential(address, blindingKey) {
+  const network = getNetwork(address);
+  if (address.startsWith(network.bech32))
+    return toConfidentialSegwit(address, blindingKey, network);
+  return toConfidentialLegacy(address, blindingKey, network);
+}
+exports.toConfidential = toConfidential;
 function fromOutputScript(output, network) {
   // TODO: Network
   network = network || networks.liquid;
@@ -172,3 +122,83 @@ function toOutputScript(address, network) {
   throw new Error(address + ' has no matching Script');
 }
 exports.toOutputScript = toOutputScript;
+function getNetwork(address) {
+  if (
+    address.startsWith(networks.liquid.blech32) ||
+    address.startsWith(networks.liquid.bech32)
+  )
+    return networks.liquid;
+  if (
+    address.startsWith(networks.regtest.blech32) ||
+    address.startsWith(networks.regtest.bech32)
+  )
+    return networks.regtest;
+  const payload = bs58check.decode(address);
+  const prefix = payload.readUInt8(0);
+  if (
+    prefix === networks.liquid.confidentialPrefix ||
+    prefix === networks.liquid.pubKeyHash ||
+    prefix === networks.liquid.scriptHash
+  )
+    return networks.liquid;
+  if (
+    prefix === networks.regtest.confidentialPrefix ||
+    prefix === networks.regtest.pubKeyHash ||
+    prefix === networks.regtest.scriptHash
+  )
+    return networks.regtest;
+  throw new Error(address + ' has an invalid prefix');
+}
+function fromConfidentialLegacy(address, network) {
+  const payload = bs58check.decode(address);
+  const prefix = payload.readUInt8(1);
+  // Check if address has valid length and prefix
+  if (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
+    throw new TypeError(address + 'is not valid');
+  if (payload.length < 55) throw new TypeError(address + ' is too short');
+  if (payload.length > 55) throw new TypeError(address + ' is too long');
+  // Blinded decoded haddress has the form:
+  // BLIND_PREFIX|ADDRESS_PREFIX|BLINDING_KEY|SCRIPT_HASH
+  // Prefixes are 1 byte long, thus blinding key always starts at 3rd byte
+  const blindingKey = payload.slice(2, 35);
+  const unconfidential = payload.slice(35, payload.length);
+  const versionBuf = new Uint8Array(1);
+  versionBuf[0] = prefix;
+  const unconfidentialAddressBuffer = Buffer.concat([
+    versionBuf,
+    unconfidential,
+  ]);
+  const unconfidentialAddress = bs58check.encode(unconfidentialAddressBuffer);
+  return { blindingKey, unconfidentialAddress };
+}
+function fromConfidentialSegwit(address, network) {
+  const result = fromBlech32(address);
+  const unconfidentialAddress = fromOutputScript(result.data, network);
+  return { blindingKey: result.pubkey, unconfidentialAddress };
+}
+function toConfidentialLegacy(address, blindingKey, network) {
+  const payload = bs58check.decode(address);
+  const prefix = payload.readUInt8(0);
+  // Check if address has valid length and prefix
+  if (
+    payload.length !== 21 ||
+    (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
+  )
+    throw new TypeError(address + 'is not valid');
+  // Check if blind key has valid length
+  if (blindingKey.length < 33) throw new TypeError('Blinding key is too short');
+  if (blindingKey.length > 33) throw new TypeError('Blinding key is too long');
+  const prefixBuf = new Uint8Array(2);
+  prefixBuf[0] = network.confidentialPrefix;
+  prefixBuf[1] = prefix;
+  const confidentialAddress = Buffer.concat([
+    prefixBuf,
+    blindingKey,
+    Buffer.from(payload.slice(1)),
+  ]);
+  return bs58check.encode(confidentialAddress);
+}
+function toConfidentialSegwit(address, blindingKey, network) {
+  const data = toOutputScript(address, network);
+  return toBlech32(data, blindingKey, network.blech32);
+}

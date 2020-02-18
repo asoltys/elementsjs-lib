@@ -1,4 +1,4 @@
-import { liquid as BITCOIN_NETWORK } from '../networks';
+import { liquid as LIQUID_NETWORK } from '../networks';
 import * as bscript from '../script';
 import { Payment, PaymentOpts, Stack } from './index';
 import * as lazy from './lazy';
@@ -49,7 +49,7 @@ export function p2ms(a: Payment, opts?: PaymentOpts): Payment {
     a,
   );
 
-  const network = a.network || BITCOIN_NETWORK;
+  const network = a.network || LIQUID_NETWORK;
   const o: Payment = { network };
 
   let chunks: Stack = [];

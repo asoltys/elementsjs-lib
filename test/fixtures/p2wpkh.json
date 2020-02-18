@@ -3,7 +3,7 @@
     {
       "description": "output from address",
       "arguments": {
-        "address": "bc1qafk4yhqvj4wep57m62dgrmutldusqde8adh20d"
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd"
       },
       "options": {},
       "expected": {
@@ -16,17 +16,69 @@
       }
     },
     {
+      "description": "output from address and blind key",
+      "arguments": {
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "options": {},
+      "expected": {
+        "name": "p2wpkh",
+        "hash": "ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "output": "OP_0 ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "signature": null,
+        "input": null,
+        "witness": null,
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr6nd2fwqe92ajrfah556s8hch7meqqmjwzya7vuln87zg",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      }
+    },
+    {
+      "description": "output from confidential address",
+      "arguments": {
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr6nd2fwqe92ajrfah556s8hch7meqqmjwzya7vuln87zg"
+      },
+      "options": {},
+      "expected": {
+        "name": "p2wpkh",
+        "hash": "ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "output": "OP_0 ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "signature": null,
+        "input": null,
+        "witness": null,
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr6nd2fwqe92ajrfah556s8hch7meqqmjwzya7vuln87zg",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      }
+    },
+    {
       "description": "output from hash",
       "arguments": {
         "hash": "ea6d525c0c955d90d3dbd29a81ef8bfb79003727"
       },
       "expected": {
         "name": "p2wpkh",
-        "address": "bc1qafk4yhqvj4wep57m62dgrmutldusqde8adh20d",
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd",
         "output": "OP_0 ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
         "signature": null,
         "input": null,
         "witness": null
+      }
+    },
+    {
+      "description": "output from hash and blind key",
+      "arguments": {
+        "hash": "ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "expected": {
+        "name": "p2wpkh",
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd",
+        "output": "OP_0 ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "signature": null,
+        "input": null,
+        "witness": null,
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr6nd2fwqe92ajrfah556s8hch7meqqmjwzya7vuln87zg",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
       }
     },
     {
@@ -36,11 +88,28 @@
       },
       "expected": {
         "name": "p2wpkh",
-        "address": "bc1qafk4yhqvj4wep57m62dgrmutldusqde8adh20d",
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd",
         "hash": "ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
         "signature": null,
         "input": null,
         "witness": null
+      }
+    },
+    {
+      "description": "output from output and blind key",
+      "arguments": {
+        "output": "OP_0 ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "expected": {
+        "name": "p2wpkh",
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd",
+        "hash": "ea6d525c0c955d90d3dbd29a81ef8bfb79003727",
+        "signature": null,
+        "input": null,
+        "witness": null,
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr6nd2fwqe92ajrfah556s8hch7meqqmjwzya7vuln87zg",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
       }
     },
     {
@@ -50,12 +119,30 @@
       },
       "expected": {
         "name": "p2wpkh",
-        "address": "bc1qz69ej270c3q9qvgt822t6pm3zdksk2x35j2jlm",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
         "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
         "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
         "signature": null,
         "input": null,
         "witness": null
+      }
+    },
+    {
+      "description": "output from pubkey and blind key",
+      "arguments": {
+        "pubkey": "030000000000000000000000000000000000000000000000000000000000000001",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "expected": {
+        "name": "p2wpkh",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
+        "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
+        "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
+        "signature": null,
+        "input": null,
+        "witness": null,
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz95tny4ul3zq2qcskw55h5rhzymdpv5dzw6hr8jz3tq5y",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
       }
     },
     {
@@ -66,7 +153,7 @@
       },
       "expected": {
         "name": "p2wpkh",
-        "address": "bc1qz69ej270c3q9qvgt822t6pm3zdksk2x35j2jlm",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
         "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
         "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
         "input": "",
@@ -74,6 +161,27 @@
           "300602010002010001",
           "030000000000000000000000000000000000000000000000000000000000000001"
         ]
+      }
+    },
+    {
+      "description": "witness/output from pubkey/signature and blind key",
+      "arguments": {
+        "pubkey": "030000000000000000000000000000000000000000000000000000000000000001",
+        "signature": "300602010002010001",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "expected": {
+        "name": "p2wpkh",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
+        "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
+        "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
+        "input": "",
+        "witness": [
+          "300602010002010001",
+          "030000000000000000000000000000000000000000000000000000000000000001"
+        ],
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz95tny4ul3zq2qcskw55h5rhzymdpv5dzw6hr8jz3tq5y",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
       }
     },
     {
@@ -86,12 +194,33 @@
       },
       "expected": {
         "name": "p2wpkh",
-        "address": "bc1qz69ej270c3q9qvgt822t6pm3zdksk2x35j2jlm",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
         "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
         "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
         "pubkey": "030000000000000000000000000000000000000000000000000000000000000001",
         "signature": "300602010002010001",
         "input": ""
+      }
+    },
+    {
+      "description": "witness/output from witness and blind key",
+      "arguments": {
+        "witness": [
+          "300602010002010001",
+          "030000000000000000000000000000000000000000000000000000000000000001"
+        ],
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
+      },
+      "expected": {
+        "name": "p2wpkh",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
+        "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
+        "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
+        "pubkey": "030000000000000000000000000000000000000000000000000000000000000001",
+        "signature": "300602010002010001",
+        "input": "",
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz95tny4ul3zq2qcskw55h5rhzymdpv5dzw6hr8jz3tq5y",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
       }
     }
   ],
@@ -133,13 +262,13 @@
     {
       "exception": "Invalid address version",
       "arguments": {
-        "address": "bc1pqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq5us4ke"
+        "address": "ex1pqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqgnmqkl"
       }
     },
     {
       "exception": "Invalid address data",
       "arguments": {
-        "address": "bc1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqmql8k8"
+        "address": "ex1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqm2k6w2"
       }
     },
     {
@@ -152,7 +281,7 @@
     {
       "exception": "Hash mismatch",
       "arguments": {
-        "address": "bc1qafk4yhqvj4wep57m62dgrmutldusqde8adh20d",
+        "address": "ex1qafk4yhqvj4wep57m62dgrmutldusqde8hy2jzd",
         "hash": "ffffffffffffffffffffffffffffffffffffffff"
       }
     },
@@ -213,12 +342,13 @@
       "pubkey": [ "witness" ],
       "signature": [ "witness" ],
       "input": [ "witness" ],
-      "witness": [ [ "pubkey", "signature" ] ]
+      "witness": [ [ "pubkey", "signature" ] ],
+      "confidentialAddress": [ "confidentialAddress", [ "address", "blindkey" ], [ "output", "blindkey" ], [ "hash", "blindkey" ], [ "pubkey", "blindkey" ], [ "witness", "blindkey" ] ]
     },
     "details": [
       {
         "description": "p2wpkh",
-        "address": "bc1qz69ej270c3q9qvgt822t6pm3zdksk2x35j2jlm",
+        "address": "ex1qz69ej270c3q9qvgt822t6pm3zdksk2x37mh2jm",
         "hash": "168b992bcfc44050310b3a94bd0771136d0b28d1",
         "output": "OP_0 168b992bcfc44050310b3a94bd0771136d0b28d1",
         "pubkey": "030000000000000000000000000000000000000000000000000000000000000001",
@@ -227,7 +357,9 @@
         "witness": [
           "300602010002010001",
           "030000000000000000000000000000000000000000000000000000000000000001"
-        ]
+        ],
+        "confidentialAddress": "lq1qqvqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz95tny4ul3zq2qcskw55h5rhzymdpv5dzw6hr8jz3tq5y",
+        "blindkey": "030000000000000000000000000000000000000000000000000000000000000001"
       }
     ]
   }

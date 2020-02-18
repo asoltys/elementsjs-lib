@@ -1,5 +1,5 @@
 import * as bcrypto from '../crypto';
-import { liquid as BITCOIN_NETWORK } from '../networks';
+import { liquid as LIQUID_NETWORK } from '../networks';
 import * as bscript from '../script';
 import { Payment, PaymentOpts, StackFunction } from './index';
 import * as lazy from './lazy';
@@ -12,7 +12,14 @@ const bs58check = require('bs58check');
 // input: {signature} {pubkey}
 // output: OP_DUP OP_HASH160 {hash160(pubkey)} OP_EQUALVERIFY OP_CHECKSIG
 export function p2pkh(a: Payment, opts?: PaymentOpts): Payment {
-  if (!a.address && !a.hash && !a.output && !a.pubkey && !a.input)
+  if (
+    !a.address &&
+    !a.hash &&
+    !a.output &&
+    !a.pubkey &&
+    !a.input &&
+    !a.confidentialAddress
+  )
     throw new TypeError('Not enough data');
   opts = Object.assign({ validate: true }, opts || {});
 
@@ -26,6 +33,8 @@ export function p2pkh(a: Payment, opts?: PaymentOpts): Payment {
       pubkey: typef.maybe(ecc.isPoint),
       signature: typef.maybe(bscript.isCanonicalScriptSignature),
       input: typef.maybe(typef.Buffer),
+      blindkey: typef.maybe(ecc.isPoint),
+      confidentialAddress: typef.maybe(typef.String),
     },
     a,
   );
@@ -39,8 +48,18 @@ export function p2pkh(a: Payment, opts?: PaymentOpts): Payment {
   const _chunks = lazy.value(() => {
     return bscript.decompile(a.input!);
   }) as StackFunction;
+  const _confidentialAddress = lazy.value(() => {
+    const payload = bs58check.decode(a.confidentialAddress!);
+    const blindkey = payload.slice(2, 35);
+    const unconfidentialAddressBuffer = Buffer.concat([
+      Buffer.from([payload.readUInt8(1)]),
+      payload.slice(35),
+    ]);
+    const unconfidentialAddress = bs58check.encode(unconfidentialAddressBuffer);
+    return { blindkey, unconfidentialAddress };
+  });
 
-  const network = a.network || BITCOIN_NETWORK;
+  const network = a.network || LIQUID_NETWORK;
   const o: Payment = { name: 'p2pkh', network };
 
   lazy.prop(o, 'address', () => {
@@ -55,6 +74,10 @@ export function p2pkh(a: Payment, opts?: PaymentOpts): Payment {
     if (a.output) return a.output.slice(3, 23);
     if (a.address) return _address().hash;
     if (a.pubkey || o.pubkey) return bcrypto.hash160(a.pubkey! || o.pubkey!);
+    if (a.confidentialAddress) {
+      const address = _confidentialAddress().unconfidentialAddress;
+      return bs58check.decode(address).slice(1);
+    }
   });
   lazy.prop(o, 'output', () => {
     if (!o.hash) return;
@@ -83,10 +106,26 @@ export function p2pkh(a: Payment, opts?: PaymentOpts): Payment {
     if (!o.input) return;
     return [];
   });
+  lazy.prop(o, 'blindkey', () => {
+    if (a.confidentialAddress) return _confidentialAddress().blindkey;
+    if (a.blindkey) return a.blindkey;
+  });
+  lazy.prop(o, 'confidentialAddress', () => {
+    if (!o.address) return;
+    if (!o.blindkey) return;
+    const payload = bs58check.decode(o.address!);
+    const confidentialAddress = Buffer.concat([
+      Buffer.from([network.confidentialPrefix, payload.readUInt8(0)]),
+      o.blindkey!,
+      Buffer.from(payload.slice(1)),
+    ]);
+    return bs58check.encode(confidentialAddress);
+  });
 
   // extended validation
   if (opts.validate) {
     let hash: Buffer = Buffer.from([]);
+    let blindkey: Buffer = Buffer.from([]);
     if (a.address) {
       if (_address().version !== network.pubKeyHash)
         throw new TypeError('Invalid version or Network mismatch');
@@ -140,6 +179,27 @@ export function p2pkh(a: Payment, opts?: PaymentOpts): Payment {
       const pkh = bcrypto.hash160(chunks[1] as Buffer);
       if (hash.length > 0 && !hash.equals(pkh))
         throw new TypeError('Hash mismatch');
+    }
+
+    if (a.confidentialAddress) {
+      if (
+        a.address &&
+        a.address !== _confidentialAddress().unconfidentialAddress
+      )
+        throw new TypeError('Address mismatch');
+      if (
+        blindkey.length > 0 &&
+        !blindkey.equals(_confidentialAddress().blindkey as Buffer)
+      )
+        throw new TypeError('Blindkey mismatch');
+      else blindkey = _confidentialAddress().blindkey;
+    }
+
+    if (a.blindkey) {
+      if (!ecc.isPoint(a.blindkey)) throw new TypeError('Blindkey is invalid');
+      if (blindkey.length > 0 && !blindkey.equals(a.blindkey))
+        throw new TypeError('Blindkey mismatch');
+      else blindkey = a.blindkey;
     }
   }
 

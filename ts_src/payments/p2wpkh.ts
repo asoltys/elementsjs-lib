@@ -1,5 +1,6 @@
+import * as baddress from '../address';
 import * as bcrypto from '../crypto';
-import { liquid as BITCOIN_NETWORK } from '../networks';
+import { liquid as LIQUID_NETWORK } from '../networks';
 import * as bscript from '../script';
 import { Payment, PaymentOpts } from './index';
 import * as lazy from './lazy';
@@ -15,7 +16,14 @@ const EMPTY_BUFFER = Buffer.alloc(0);
 // input: <>
 // output: OP_0 {pubKeyHash}
 export function p2wpkh(a: Payment, opts?: PaymentOpts): Payment {
-  if (!a.address && !a.hash && !a.output && !a.pubkey && !a.witness)
+  if (
+    !a.address &&
+    !a.hash &&
+    !a.output &&
+    !a.pubkey &&
+    !a.witness &&
+    !a.confidentialAddress
+  )
     throw new TypeError('Not enough data');
   opts = Object.assign({ validate: true }, opts || {});
 
@@ -33,6 +41,8 @@ export function p2wpkh(a: Payment, opts?: PaymentOpts): Payment {
     a,
   );
 
+  const network = a.network || LIQUID_NETWORK;
+
   const _address = lazy.value(() => {
     const result = bech32.decode(a.address);
     const version = result.words.shift();
@@ -43,8 +53,18 @@ export function p2wpkh(a: Payment, opts?: PaymentOpts): Payment {
       data: Buffer.from(data),
     };
   });
+  const _confidentialAddress = lazy.value(() => {
+    const result = baddress.fromBlech32(a.confidentialAddress!);
+    return {
+      blindingKey: result.pubkey,
+      unconfidentialAddress: baddress.toBech32(
+        result.data.slice(2),
+        result.version,
+        network!.bech32,
+      ),
+    };
+  });
 
-  const network = a.network || BITCOIN_NETWORK;
   const o: Payment = { name: 'p2wpkh', network };
 
   lazy.prop(o, 'address', () => {
@@ -58,6 +78,10 @@ export function p2wpkh(a: Payment, opts?: PaymentOpts): Payment {
     if (a.output) return a.output.slice(2, 22);
     if (a.address) return _address().data;
     if (a.pubkey || o.pubkey) return bcrypto.hash160(a.pubkey! || o.pubkey!);
+    if (a.confidentialAddress) {
+      const addr = _confidentialAddress().unconfidentialAddress;
+      return baddress.fromBech32(addr).data;
+    }
   });
   lazy.prop(o, 'output', () => {
     if (!o.hash) return;
@@ -81,10 +105,25 @@ export function p2wpkh(a: Payment, opts?: PaymentOpts): Payment {
     if (!a.signature) return;
     return [a.signature, a.pubkey];
   });
+  lazy.prop(o, 'blindkey', () => {
+    if (a.confidentialAddress) return _confidentialAddress().blindingKey;
+    if (a.blindkey) return a.blindkey;
+  });
+  lazy.prop(o, 'confidentialAddress', () => {
+    if (!o.address) return;
+    if (!o.blindkey) return;
+    const res = baddress.fromBech32(o.address);
+    const data = Buffer.concat([
+      Buffer.from([res.version, res.data.length]),
+      res.data,
+    ]);
+    return baddress.toBlech32(data, o.blindkey!, o.network!.blech32);
+  });
 
   // extended validation
   if (opts.validate) {
     let hash: Buffer = Buffer.from([]);
+    let blindkey: Buffer = Buffer.from([]);
     if (a.address) {
       if (network && network.bech32 !== _address().prefix)
         throw new TypeError('Invalid prefix or Network mismatch');
@@ -135,6 +174,27 @@ export function p2wpkh(a: Payment, opts?: PaymentOpts): Payment {
       const pkh = bcrypto.hash160(a.witness[1]);
       if (hash.length > 0 && !hash.equals(pkh))
         throw new TypeError('Hash mismatch');
+    }
+
+    if (a.confidentialAddress) {
+      if (
+        a.address &&
+        a.address !== _confidentialAddress().unconfidentialAddress
+      )
+        throw new TypeError('Address mismatch');
+      if (
+        blindkey.length > 0 &&
+        !blindkey.equals(_confidentialAddress().blindingKey as Buffer)
+      )
+        throw new TypeError('Blindkey mismatch');
+      else blindkey = _confidentialAddress().blindingKey;
+    }
+
+    if (a.blindkey) {
+      if (!ecc.isPoint(a.blindkey)) throw new TypeError('Blindkey is invalid');
+      if (blindkey.length > 0 && !blindkey.equals(a.blindkey))
+        throw new TypeError('Blindkey mismatch');
+      else blindkey = a.blindkey;
     }
   }
 

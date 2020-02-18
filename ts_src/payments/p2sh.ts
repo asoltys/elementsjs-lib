@@ -1,5 +1,5 @@
 import * as bcrypto from '../crypto';
-import { liquid as BITCOIN_NETWORK } from '../networks';
+import { liquid as LIQUID_NETWORK } from '../networks';
 import * as bscript from '../script';
 import {
   Payment,
@@ -11,6 +11,7 @@ import {
 import * as lazy from './lazy';
 const typef = require('typeforce');
 const OPS = bscript.OPS;
+const ecc = require('tiny-secp256k1');
 
 const bs58check = require('bs58check');
 
@@ -26,7 +27,14 @@ function stacksEqual(a: Buffer[], b: Buffer[]): boolean {
 // witness: <?>
 // output: OP_HASH160 {hash160(redeemScript)} OP_EQUAL
 export function p2sh(a: Payment, opts?: PaymentOpts): Payment {
-  if (!a.address && !a.hash && !a.output && !a.redeem && !a.input)
+  if (
+    !a.address &&
+    !a.hash &&
+    !a.output &&
+    !a.redeem &&
+    !a.input &&
+    !a.confidentialAddress
+  )
     throw new TypeError('Not enough data');
   opts = Object.assign({ validate: true }, opts || {});
 
@@ -46,13 +54,15 @@ export function p2sh(a: Payment, opts?: PaymentOpts): Payment {
       }),
       input: typef.maybe(typef.Buffer),
       witness: typef.maybe(typef.arrayOf(typef.Buffer)),
+      blindkey: typef.maybe(ecc.isPoint),
+      confidentialAddress: typef.maybe(typef.String),
     },
     a,
   );
 
   let network = a.network;
   if (!network) {
-    network = (a.redeem && a.redeem.network) || BITCOIN_NETWORK;
+    network = (a.redeem && a.redeem.network) || LIQUID_NETWORK;
   }
 
   const o: Payment = { network };
@@ -77,6 +87,16 @@ export function p2sh(a: Payment, opts?: PaymentOpts): Payment {
       };
     },
   ) as PaymentFunction;
+  const _confidentialAddress = lazy.value(() => {
+    const payload = bs58check.decode(a.confidentialAddress!);
+    const blindkey = payload.slice(2, 35);
+    const unconfidentialAddressBuffer = Buffer.concat([
+      Buffer.from([payload.readUInt8(1)]),
+      payload.slice(35),
+    ]);
+    const unconfidentialAddress = bs58check.encode(unconfidentialAddressBuffer);
+    return { blindkey, unconfidentialAddress };
+  });
 
   // output dependents
   lazy.prop(o, 'address', () => {
@@ -92,6 +112,10 @@ export function p2sh(a: Payment, opts?: PaymentOpts): Payment {
     if (a.output) return a.output.slice(2, 22);
     if (a.address) return _address().hash;
     if (o.redeem && o.redeem.output) return bcrypto.hash160(o.redeem.output);
+    if (a.confidentialAddress) {
+      const address = _confidentialAddress().unconfidentialAddress;
+      return bs58check.decode(address).slice(1);
+    }
   });
   lazy.prop(o, 'output', () => {
     if (!o.hash) return;
@@ -121,9 +145,25 @@ export function p2sh(a: Payment, opts?: PaymentOpts): Payment {
     if (o.redeem !== undefined) nameParts.push(o.redeem.name!);
     return nameParts.join('-');
   });
+  lazy.prop(o, 'blindkey', () => {
+    if (a.confidentialAddress) return _confidentialAddress().blindkey;
+    if (a.blindkey) return a.blindkey;
+  });
+  lazy.prop(o, 'confidentialAddress', () => {
+    if (!o.address) return;
+    if (!o.blindkey) return;
+    const payload = bs58check.decode(o.address!);
+    const confidentialAddress = Buffer.concat([
+      Buffer.from([network!.confidentialPrefix, payload.readUInt8(0)]),
+      o.blindkey!,
+      Buffer.from(payload.slice(1)),
+    ]);
+    return bs58check.encode(confidentialAddress);
+  });
 
   if (opts.validate) {
     let hash: Buffer = Buffer.from([]);
+    let blindkey: Buffer = Buffer.from([]);
     if (a.address) {
       if (_address().version !== network.scriptHash)
         throw new TypeError('Invalid version or Network mismatch');
@@ -211,6 +251,27 @@ export function p2sh(a: Payment, opts?: PaymentOpts): Payment {
         !stacksEqual(a.redeem.witness, a.witness)
       )
         throw new TypeError('Witness and redeem.witness mismatch');
+    }
+
+    if (a.confidentialAddress) {
+      if (
+        a.address &&
+        a.address !== _confidentialAddress().unconfidentialAddress
+      )
+        throw new TypeError('Address mismatch');
+      if (
+        blindkey.length > 0 &&
+        !blindkey.equals(_confidentialAddress().blindkey as Buffer)
+      )
+        throw new TypeError('Blindkey mismatch');
+      else blindkey = _confidentialAddress().blindkey;
+    }
+
+    if (a.blindkey) {
+      if (!ecc.isPoint(a.blindkey)) throw new TypeError('Blindkey is invalid');
+      if (blindkey.length > 0 && !blindkey.equals(a.blindkey))
+        throw new TypeError('Blindkey mismatch');
+      else blindkey = a.blindkey;
     }
   }
 

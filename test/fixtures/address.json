@@ -4,29 +4,85 @@
       "network": "liquid",
       "version": 57,
       "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
-      "unconfidentialAddress": "Q7qcjTLsYGoMA7TjUp97R6E6AM5VKqBik6",
+      "hash": "73fa580ea148bf5a520e21a9e6a875d38603df96",
+      "base58check": "Q7qcjTLsYGoMA7TjUp97R6E6AM5VKqBik6",
+      "script": "OP_DUP OP_HASH160 73fa580ea148bf5a520e21a9e6a875d38603df96 OP_EQUALVERIFY OP_CHECKSIG",
       "confidentialAddress": "VTpz1bNuCALgavJKgbAw9Lpp9A72rJy64XPqgqfnaLpMjRcPh5UHBqyRUE4WMZ3asjqu7YEPVAnWw2EK"
     },
     {
       "network": "liquid",
       "version": 57,
       "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
-      "unconfidentialAddress": "Pz7eBTfLoVaisE57DLn6rZhEtFNa7SnZ2Z",
+      "hash": "1f4133bed29660d80240ab1a4cb5b09ddefd1b87",
+      "base58check": "Pz7eBTfLoVaisE57DLn6rZhEtFNa7SnZ2Z",
+      "script": "OP_DUP OP_HASH160 1f4133bed29660d80240ab1a4cb5b09ddefd1b87 OP_EQUALVERIFY OP_CHECKSIG",
       "confidentialAddress": "VTpz1bNuCALgavJKgbAw9Lpp9A72rJy64XPqgqfnaLpMjRcFy6vHWKEeFbmcxvn7WjHNagxHnFaRcVuS"
     },
     {
       "network": "regtest",
       "version": 75,
       "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
-      "unconfidentialAddress": "XFKcLWJmPuToz62uc2sgCBUddmH6yopoxE",
+      "hash": "2b919bfc040faed8de5469dfa0241a3c1e5681be",
+      "base58check": "XFKcLWJmPuToz62uc2sgCBUddmH6yopoxE",
+      "script": "OP_HASH160 2b919bfc040faed8de5469dfa0241a3c1e5681be OP_EQUAL",
       "confidentialAddress": "AzppxC5RDs8yB8mabhwS13y4WbsWoS41fLV8GKM4woLUJB5RxNBVfK6wdVX4QVoubRXFKKfbPhEKKTKc"
     },
     {
       "network": "regtest",
       "version": 235,
       "blindkey": "02dce16018bbbb8e36de7b394df5b5166e9adb7498be7d881a85a09aeecf76b623",
-      "unconfidentialAddress": "2dgp82cKUqN7pesBxcK6smvFSzCjyqqv1wL",
+      "hash": "5104186b6dc2bd280b7a82b89c7b0f174adacbe4",
+      "base58check": "2dgp82cKUqN7pesBxcK6smvFSzCjyqqv1wL",
+      "script": "OP_DUP OP_HASH160 5104186b6dc2bd280b7a82b89c7b0f174adacbe4 OP_EQUALVERIFY OP_CHECKSIG",
       "confidentialAddress": "CTEqfbuwRjMKaivrrNqMSZahNuqitEMLabLzfxsyNPpPD2DvPGn9SW3Hp4RTEbgQgHtckwd8ons8vHcg"
+    },
+    {
+      "network": "regtest",
+      "version": 0,
+      "blindkey": "03a398eed59a2368563bbd2bc68a7ccdbbd6dcbf43b298edc810d22edb6d761800",
+      "data": "e6a10b7bd8aeb56444c5734ea682cd2f1ad692c4",
+      "bech32": "ert1qu6ssk77c466kg3x9wd82dqkd9udddykyfykm9k",
+      "script": "OP_0 e6a10b7bd8aeb56444c5734ea682cd2f1ad692c4",
+      "confidentialAddress": "el1qqw3e3mk4ng3ks43mh54udznuekaadh9lgwef3mwgzrfzakmdwcvqpe4ppdaa3t44v3zv2u6w56pv6tc666fvgzaclqjnkz0sd"
+    },
+    {
+      "network": "regtest",
+      "version": 0,
+      "blindkey": "03a398eed59a2368563bbd2bc68a7ccdbbd6dcbf43b298edc810d22edb6d761800",
+      "data": "24c95b06bd6f67ce6bcf62473179713d607431ab9b86f9618c1b80ee8eab2831",
+      "bech32": "ert1qyny4kp4adanuu670vfrnz7t384s8gvdtnwr0jcvvrwqwar4t9qcs2m7c20",
+      "script": "OP_0 24c95b06bd6f67ce6bcf62473179713d607431ab9b86f9618c1b80ee8eab2831",
+      "confidentialAddress": "el1qqw3e3mk4ng3ks43mh54udznuekaadh9lgwef3mwgzrfzakmdwcvqqfxftvrt6mm8ee4u7cj8x9uhz0tqwsc6hxuxl9sccxuqa682k2p34j69q77djwvn"
+    }
+  ],
+  "bech32": [
+    {
+      "address": "ert1qu6ssk77c466kg3x9wd82dqkd9udddykyfykm9k",
+      "version": 0,
+      "prefix": "ert",
+      "data": "e6a10b7bd8aeb56444c5734ea682cd2f1ad692c4"
+    },
+    {
+      "address": "ert1qyny4kp4adanuu670vfrnz7t384s8gvdtnwr0jcvvrwqwar4t9qcs2m7c20",
+      "version": 0,
+      "prefix": "ert",
+      "data": "24c95b06bd6f67ce6bcf62473179713d607431ab9b86f9618c1b80ee8eab2831"
+    }
+  ],
+  "blech32": [
+    {
+      "address": "el1qqw3e3mk4ng3ks43mh54udznuekaadh9lgwef3mwgzrfzakmdwcvqpe4ppdaa3t44v3zv2u6w56pv6tc666fvgzaclqjnkz0sd",
+      "version": 0,
+      "prefix": "el",
+      "data": "e6a10b7bd8aeb56444c5734ea682cd2f1ad692c4",
+      "blindkey": "03a398eed59a2368563bbd2bc68a7ccdbbd6dcbf43b298edc810d22edb6d761800"
+    },
+    {
+      "address": "el1qqw3e3mk4ng3ks43mh54udznuekaadh9lgwef3mwgzrfzakmdwcvqqfxftvrt6mm8ee4u7cj8x9uhz0tqwsc6hxuxl9sccxuqa682k2p34j69q77djwvn",
+      "version": 0,
+      "prefix": "el",
+      "data": "24c95b06bd6f67ce6bcf62473179713d607431ab9b86f9618c1b80ee8eab2831",
+      "blindkey": "03a398eed59a2368563bbd2bc68a7ccdbbd6dcbf43b298edc810d22edb6d761800"
     }
   ]
 }

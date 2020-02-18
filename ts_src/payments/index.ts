@@ -23,6 +23,8 @@ export interface Payment {
   hash?: Buffer;
   redeem?: Payment;
   witness?: Buffer[];
+  blindkey?: Buffer;
+  confidentialAddress?: string;
 }
 
 export type PaymentCreator = (a: Payment, opts?: PaymentOpts) => Payment;

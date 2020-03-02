@@ -55,6 +55,7 @@
     "bip66": "^1.1.0",
     "bitcoin-ops": "^1.4.0",
     "blech32": "github:vulpemventures/blech32",
+    "secp256k1-zkp": "github:vulpemventures/secp256k1-zkp",
     "bs58check": "^2.0.0",
     "create-hash": "^1.1.0",
     "create-hmac": "^1.1.3",

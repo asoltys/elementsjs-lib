@@ -690,6 +690,18 @@ export class Transaction {
     this.ins[index].inflationRangeProof = inflationRangeProof;
   }
 
+  setOutputRangeProof(index: number, proof: Buffer): void {
+    typeforce(types.tuple(types.Number, types.Buffer), arguments);
+
+    this.outs[index].rangeProof = proof;
+  }
+
+  setOutputSurjectionProof(index: number, proof: Buffer): void {
+    typeforce(types.tuple(types.Number, types.Buffer), arguments);
+
+    this.outs[index].surjectionProof = proof;
+  }
+
   private __byteLength(
     _ALLOW_WITNESS: boolean,
     forSignature?: boolean,

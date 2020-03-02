@@ -539,6 +539,14 @@ class Transaction {
       throw new Error('Issuance not set for input #' + index);
     this.ins[index].inflationRangeProof = inflationRangeProof;
   }
+  setOutputRangeProof(index, proof) {
+    typeforce(types.tuple(types.Number, types.Buffer), arguments);
+    this.outs[index].rangeProof = proof;
+  }
+  setOutputSurjectionProof(index, proof) {
+    typeforce(types.tuple(types.Number, types.Buffer), arguments);
+    this.outs[index].surjectionProof = proof;
+  }
   __byteLength(_ALLOW_WITNESS, forSignature) {
     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
     return (

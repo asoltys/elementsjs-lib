@@ -1,0 +1,12 @@
+export declare function valueBlindingFactor(values: string[], nInputs: number, generators: Buffer[], factors: Buffer[]): Buffer;
+export declare function valueCommitment(value: string, generator: Buffer, factor: Buffer): Buffer;
+export declare function assetCommitment(asset: Buffer, factor: Buffer): Buffer;
+export interface UnblindOutputResult {
+    value: string;
+    valueBlindingFactor: Buffer;
+    asset: Buffer;
+    assetBlindingFactor: Buffer;
+}
+export declare function unblindOutput(ephemeralPubkey: Buffer, blindingPrivkey: Buffer, rangeproof: Buffer, valueCommit: Buffer, asset: Buffer, scriptPubkey: Buffer): UnblindOutputResult;
+export declare function rangeProof(value: string, blindingPubkey: Buffer, ephemeralPrivkey: Buffer, asset: Buffer, assetBlindingFactor: Buffer, valueBlindFactor: Buffer, valueCommit: Buffer, scriptPubkey: Buffer, minValue?: string, exp?: number, minBits?: number): Buffer;
+export declare function surjectionProof(outputAsset: Buffer, outputAssetBlindingFactor: Buffer, inputAssets: Buffer[], inputAssetBlindingFactors: Buffer[], seed: Buffer): Buffer;

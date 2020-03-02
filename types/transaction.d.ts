@@ -70,6 +70,8 @@ export declare class Transaction {
     setPeginWitness(index: number, peginWitness: Buffer[]): void;
     setInputIssuanceRangeProof(index: number, issuanceRangeProof: Buffer): void;
     setInputInflationRangeProof(index: number, inflationRangeProof: Buffer): void;
+    setOutputRangeProof(index: number, proof: Buffer): void;
+    setOutputSurjectionProof(index: number, proof: Buffer): void;
     private __byteLength;
     private __toBuffer;
 }

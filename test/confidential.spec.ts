@@ -75,6 +75,16 @@ describe('confidential', () => {
     });
   });
 
+  it('rangeProofInfo', () => {
+    fixtures.valid.rangeproofInfo.forEach((f: any) => {
+      const proofInfo = confidential.rangeProofInfo(f.proof);
+      assert.strictEqual(proofInfo.ctExp, f.expected.ctExp);
+      assert.strictEqual(proofInfo.ctBits, f.expected.ctBits);
+      assert.strictEqual(proofInfo.minValue, f.expected.minValue);
+      assert.strictEqual(proofInfo.maxValue, f.expected.maxValue);
+    });
+  });
+
   it('rangeProof', () => {
     fixtures.valid.rangeproof.forEach((f: any) => {
       const minValue = '1';

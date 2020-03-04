@@ -68,6 +68,25 @@ export function unblindOutput(
   };
 }
 
+export interface RangeProofInfoResult {
+  ctExp: number;
+  ctBits: number;
+  minValue: number;
+  maxValue: number;
+}
+
+export function rangeProofInfo(proof: Buffer): RangeProofInfoResult {
+  const { exp, mantissa, minValue, maxValue } = secp256k1.rangeproof.info(
+    proof,
+  );
+  return {
+    minValue: parseInt(minValue, 10),
+    maxValue: parseInt(maxValue, 10),
+    ctExp: exp,
+    ctBits: parseInt(mantissa, 10),
+  };
+}
+
 export function rangeProof(
   value: string,
   blindingPubkey: Buffer,

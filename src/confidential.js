@@ -50,6 +50,18 @@ function unblindOutput(
   };
 }
 exports.unblindOutput = unblindOutput;
+function rangeProofInfo(proof) {
+  const { exp, mantissa, minValue, maxValue } = secp256k1.rangeproof.info(
+    proof,
+  );
+  return {
+    minValue: parseInt(minValue, 10),
+    maxValue: parseInt(maxValue, 10),
+    ctExp: exp,
+    ctBits: parseInt(mantissa, 10),
+  };
+}
+exports.rangeProofInfo = rangeProofInfo;
 function rangeProof(
   value,
   blindingPubkey,

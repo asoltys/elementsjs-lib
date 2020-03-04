@@ -690,6 +690,12 @@ export class Transaction {
     this.ins[index].inflationRangeProof = inflationRangeProof;
   }
 
+  setOutputNonce(index: number, nonce: Buffer): void {
+    typeforce(types.tuple(types.Number, types.Buffer), arguments);
+
+    this.outs[index].nonce = nonce;
+  }
+
   setOutputRangeProof(index: number, proof: Buffer): void {
     typeforce(types.tuple(types.Number, types.Buffer), arguments);
 

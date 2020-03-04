@@ -539,6 +539,10 @@ class Transaction {
       throw new Error('Issuance not set for input #' + index);
     this.ins[index].inflationRangeProof = inflationRangeProof;
   }
+  setOutputNonce(index, nonce) {
+    typeforce(types.tuple(types.Number, types.Buffer), arguments);
+    this.outs[index].nonce = nonce;
+  }
   setOutputRangeProof(index, proof) {
     typeforce(types.tuple(types.Number, types.Buffer), arguments);
     this.outs[index].rangeProof = proof;

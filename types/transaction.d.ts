@@ -76,5 +76,3 @@ export declare class Transaction {
     private __byteLength;
     private __toBuffer;
 }
-export declare function confidentialValueToSatoshi(value: Buffer): number;
-export declare function satoshiToConfidentialValue(amount: number): Buffer;

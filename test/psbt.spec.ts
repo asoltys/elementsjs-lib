@@ -5,8 +5,8 @@ import {
   ECPair,
   networks as NETWORKS,
   Psbt,
-  satoshiToConfidentialValue,
 } from '..';
+const { satoshiToConfidentialValue } = require('../src/confidential');
 const bscript = require('../src/script');
 import * as preFixtures from './fixtures/psbt.json';
 

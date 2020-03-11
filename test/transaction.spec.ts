@@ -2,10 +2,8 @@ import * as assert from 'assert';
 const { describe, it } = require('mocha');
 const bscript = require('../src/script');
 const fixtures = require('./fixtures/transaction');
-const {
-  Transaction,
-  satoshiToConfidentialValue,
-} = require('../src/transaction');
+const { Transaction } = require('../src/transaction');
+const { satoshiToConfidentialValue } = require('../src/confidential');
 
 const emptyNonce = Buffer.from('00', 'hex');
 

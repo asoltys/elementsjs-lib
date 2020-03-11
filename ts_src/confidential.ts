@@ -1,5 +1,6 @@
 import * as secp256k1 from 'secp256k1-zkp';
 
+import * as bufferutils from './bufferutils';
 import * as crypto from './crypto';
 
 function nonceHash(pubkey: Buffer, privkey: Buffer): Buffer {
@@ -7,11 +8,17 @@ function nonceHash(pubkey: Buffer, privkey: Buffer): Buffer {
 }
 
 export function valueBlindingFactor(
-  values: string[],
-  nInputs: number,
-  generators: Buffer[],
-  factors: Buffer[],
+  inValues: string[],
+  outValues: string[],
+  inGenerators: Buffer[],
+  outGenerators: Buffer[],
+  inFactors: Buffer[],
+  outFactors: Buffer[],
 ): Buffer {
+  const values = inValues.concat(outValues);
+  const nInputs = inValues.length;
+  const generators = inGenerators.concat(outGenerators);
+  const factors = inFactors.concat(outFactors);
   return secp256k1.pedersen.blindGeneratorBlindSum(
     values,
     nInputs,
@@ -159,4 +166,30 @@ export function surjectionProof(
   );
 
   return secp256k1.surjectionproof.serialize(proof);
+}
+
+const CONFIDENTIAL_VALUE = 9; // explicit size of confidential values
+
+export function confidentialValueToSatoshi(value: Buffer): number {
+  if (!isUnconfidentialValue(value)) {
+    throw new Error(
+      'Value must be unconfidential, length or the prefix are not valid',
+    );
+  }
+  const reverseValueBuffer: Buffer = Buffer.allocUnsafe(CONFIDENTIAL_VALUE - 1);
+  value.slice(1, CONFIDENTIAL_VALUE).copy(reverseValueBuffer, 0);
+  bufferutils.reverseBuffer(reverseValueBuffer);
+  return bufferutils.readUInt64LE(reverseValueBuffer, 0);
+}
+
+export function satoshiToConfidentialValue(amount: number): Buffer {
+  const unconfPrefix: Buffer = Buffer.allocUnsafe(1);
+  const valueBuffer: Buffer = Buffer.allocUnsafe(CONFIDENTIAL_VALUE - 1);
+  unconfPrefix.writeUInt8(1, 0);
+  bufferutils.writeUInt64LE(valueBuffer, amount, 0);
+  return Buffer.concat([unconfPrefix, bufferutils.reverseBuffer(valueBuffer)]);
+}
+
+export function isUnconfidentialValue(value: Buffer): boolean {
+  return value.length === CONFIDENTIAL_VALUE && value.readUInt8(0) === 1;
 }

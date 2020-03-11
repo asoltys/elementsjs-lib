@@ -1,11 +1,23 @@
 'use strict';
 Object.defineProperty(exports, '__esModule', { value: true });
 const secp256k1 = require('secp256k1-zkp');
+const bufferutils = require('./bufferutils');
 const crypto = require('./crypto');
 function nonceHash(pubkey, privkey) {
   return crypto.sha256(secp256k1.ecdh.ecdh(pubkey, privkey));
 }
-function valueBlindingFactor(values, nInputs, generators, factors) {
+function valueBlindingFactor(
+  inValues,
+  outValues,
+  inGenerators,
+  outGenerators,
+  inFactors,
+  outFactors,
+) {
+  const values = inValues.concat(outValues);
+  const nInputs = inValues.length;
+  const generators = inGenerators.concat(outGenerators);
+  const factors = inFactors.concat(outFactors);
   return secp256k1.pedersen.blindGeneratorBlindSum(
     values,
     nInputs,
@@ -130,3 +142,28 @@ function surjectionProof(
   return secp256k1.surjectionproof.serialize(proof);
 }
 exports.surjectionProof = surjectionProof;
+const CONFIDENTIAL_VALUE = 9; // explicit size of confidential values
+function confidentialValueToSatoshi(value) {
+  if (!isUnconfidentialValue(value)) {
+    throw new Error(
+      'Value must be unconfidential, length or the prefix are not valid',
+    );
+  }
+  const reverseValueBuffer = Buffer.allocUnsafe(CONFIDENTIAL_VALUE - 1);
+  value.slice(1, CONFIDENTIAL_VALUE).copy(reverseValueBuffer, 0);
+  bufferutils.reverseBuffer(reverseValueBuffer);
+  return bufferutils.readUInt64LE(reverseValueBuffer, 0);
+}
+exports.confidentialValueToSatoshi = confidentialValueToSatoshi;
+function satoshiToConfidentialValue(amount) {
+  const unconfPrefix = Buffer.allocUnsafe(1);
+  const valueBuffer = Buffer.allocUnsafe(CONFIDENTIAL_VALUE - 1);
+  unconfPrefix.writeUInt8(1, 0);
+  bufferutils.writeUInt64LE(valueBuffer, amount, 0);
+  return Buffer.concat([unconfPrefix, bufferutils.reverseBuffer(valueBuffer)]);
+}
+exports.satoshiToConfidentialValue = satoshiToConfidentialValue;
+function isUnconfidentialValue(value) {
+  return value.length === CONFIDENTIAL_VALUE && value.readUInt8(0) === 1;
+}
+exports.isUnconfidentialValue = isUnconfidentialValue;

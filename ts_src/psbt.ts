@@ -15,8 +15,10 @@ import {
 import { checkForInput } from 'bip174/src/lib/utils';
 import { toOutputScript } from './address';
 import { reverseBuffer } from './bufferutils';
+import * as confidential from './confidential';
 import { hash160 } from './crypto';
 import {
+  fromPrivateKey as ecPairFromPrivateKey,
   fromPublicKey as ecPairFromPublicKey,
   Signer,
   SignerAsync,
@@ -25,6 +27,7 @@ import { liquid as btcNetwork, Network } from './networks';
 import * as payments from './payments';
 import * as bscript from './script';
 import { Issuance, Output, Transaction } from './transaction';
+const _randomBytes = require('randombytes');
 
 /**
  * These are the default arguments for a Psbt instance.
@@ -603,6 +606,156 @@ export class Psbt {
     return this;
   }
 
+  blindOutputs(
+    blindingPrivkeys: Buffer[],
+    blindingPubkeys: Buffer[],
+    opts?: RngOpts,
+  ): this {
+    if (
+      this.data.inputs.some(
+        (v: PsbtInput) => !v.nonWitnessUtxo && !v.witnessUtxo,
+      )
+    )
+      throw new Error(
+        'All inputs must contain a non witness utxo or a witness utxo',
+      );
+    if (blindingPrivkeys.length !== this.data.inputs.length)
+      throw new Error(
+        'Blinding private keys do not match the number of inputs',
+      );
+    if (blindingPubkeys.length !== this.data.outputs.length - 1)
+      throw new Error(
+        'Blinding public keys do not match the number of outputs (fee excluded)',
+      );
+
+    const c = this.__CACHE;
+    const outputValues = c.__TX.outs.map(v =>
+      confidential.confidentialValueToSatoshi(v.value).toString(10),
+    );
+
+    const inputAbfs: Buffer[] = [];
+    const inputVbfs: Buffer[] = [];
+    const inputAgs: Buffer[] = [];
+    const inputValues: string[] = [];
+
+    // unblind inputs
+    this.data.inputs.forEach((input: PsbtInput, index: number) => {
+      let prevout: any;
+      if (input.nonWitnessUtxo) {
+        const prevTx = nonWitnessUtxoTxFromCache(c, input, index);
+        const prevoutIndex = c.__TX.ins[index].index;
+        prevout = prevTx.outs[prevoutIndex];
+      } else {
+        prevout = { ...input.witnessUtxo };
+      }
+
+      const unblindPrevout = {
+        value: '',
+        ag: Buffer.alloc(0),
+        abf: Buffer.alloc(0),
+        vbf: Buffer.alloc(0),
+      };
+      if (
+        prevout.rangeProof!.length > 0 &&
+        prevout.surjectionProof!.length > 0
+      ) {
+        const unblindProof = confidential.unblindOutput(
+          prevout.nonce,
+          blindingPrivkeys[index],
+          prevout.rangeProof!,
+          prevout.value,
+          prevout.asset,
+          prevout.script,
+        );
+        unblindPrevout.ag = unblindProof.asset;
+        unblindPrevout.value = unblindProof.value;
+        unblindPrevout.abf = unblindProof.assetBlindingFactor;
+        unblindPrevout.vbf = unblindProof.valueBlindingFactor;
+      } else {
+        unblindPrevout.value = confidential
+          .confidentialValueToSatoshi(prevout.value)
+          .toString(10);
+      }
+
+      inputAgs.push(unblindPrevout.ag);
+      inputValues.push(unblindPrevout.value);
+      inputAbfs.push(unblindPrevout.abf);
+      inputVbfs.push(unblindPrevout.vbf);
+    });
+
+    // generate output blinding factors
+    const numOutputs = this.data.outputs.length - 1; // exclude fees output
+    const outputAbfs = this.data.outputs
+      .slice(0, numOutputs)
+      .map(() => randomBytes(opts!));
+    const outputVbfs = this.data.outputs
+      .slice(0, numOutputs - 1)
+      .map(() => randomBytes(opts!));
+    const finalVbf = confidential.valueBlindingFactor(
+      inputValues,
+      outputValues,
+      inputAbfs,
+      outputAbfs,
+      inputVbfs,
+      outputVbfs,
+    );
+    outputVbfs.push(finalVbf);
+
+    range(this.data.outputs.length).forEach(outputIndex => {
+      const outputAsset = c.__TX.outs[outputIndex].asset.slice(1);
+      const outputScript = c.__TX.outs[outputIndex].script;
+      const outputValue = outputValues[outputIndex];
+
+      // if script output is null it means that the current is a fee output
+      // thus, it does not need to be blinded
+      if (outputScript.length === 0) return;
+
+      // blind output
+      const randomSeed = randomBytes(opts!);
+      const ephemeralPrivKey = randomBytes(opts!);
+      const outputNonce = ecPairFromPrivateKey(ephemeralPrivKey).publicKey;
+      const assetCommitment = confidential.assetCommitment(
+        outputAsset,
+        outputAbfs[outputIndex],
+      );
+      const valueCommitment = confidential.valueCommitment(
+        outputValue,
+        assetCommitment,
+        outputVbfs[outputIndex],
+      );
+      const rangeProof = confidential.rangeProof(
+        outputValue,
+        blindingPubkeys[outputIndex],
+        ephemeralPrivKey,
+        outputAsset,
+        outputAbfs[outputIndex],
+        outputVbfs[outputIndex],
+        valueCommitment,
+        outputScript,
+      );
+
+      const surjectionProof = confidential.surjectionProof(
+        outputAsset,
+        outputAbfs[outputIndex],
+        inputAgs,
+        inputAbfs,
+        randomSeed,
+      );
+
+      c.__TX.outs[outputIndex].asset = assetCommitment;
+      c.__TX.outs[outputIndex].value = valueCommitment;
+      c.__TX.setOutputNonce(outputIndex, outputNonce);
+      c.__TX.setOutputRangeProof(outputIndex, rangeProof);
+      c.__TX.setOutputSurjectionProof(outputIndex, surjectionProof);
+    });
+
+    c.__FEE = undefined;
+    c.__FEE_RATE = undefined;
+    c.__EXTRACTED_TX = undefined;
+
+    return this;
+  }
+
   addUnknownKeyValToGlobal(keyVal: KeyValue): this {
     this.data.addUnknownKeyValToGlobal(keyVal);
     return this;
@@ -739,8 +892,7 @@ class PsbtTransaction implements ITransaction {
       typeof input.hash === 'string'
         ? reverseBuffer(Buffer.from(input.hash, 'hex'))
         : input.hash;
-    const script = input.script ? input.script : Buffer.alloc(0);
-    this.tx.addInput(hash, input.index, input.sequence, script, input.issuance);
+    this.tx.addInput(hash, input.index, input.sequence);
   }
 
   addOutput(output: any): void {
@@ -1484,4 +1636,14 @@ function classifyScript(script: Buffer): string {
 
 function range(n: number): number[] {
   return [...Array(n).keys()];
+}
+
+interface RngOpts {
+  rng?(arg0: number): Buffer;
+}
+
+function randomBytes(options?: RngOpts): Buffer {
+  if (options === undefined) options = {};
+  const rng = options.rng || _randomBytes;
+  return rng(32);
 }

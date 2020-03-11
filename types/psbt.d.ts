@@ -75,6 +75,7 @@ export declare class Psbt {
     updateGlobal(updateData: PsbtGlobalUpdate): this;
     updateInput(inputIndex: number, updateData: PsbtInputUpdate): this;
     updateOutput(outputIndex: number, updateData: PsbtOutputUpdate): this;
+    blindOutputs(blindingPrivkeys: Buffer[], blindingPubkeys: Buffer[], opts?: RngOpts): this;
     addUnknownKeyValToGlobal(keyVal: KeyValue): this;
     addUnknownKeyValToInput(inputIndex: number, keyVal: KeyValue): this;
     addUnknownKeyValToOutput(outputIndex: number, keyVal: KeyValue): this;
@@ -125,5 +126,8 @@ interface HDSigner extends HDSignerBase {
 interface HDSignerAsync extends HDSignerBase {
     derivePath(path: string): HDSignerAsync;
     sign(hash: Buffer): Promise<Buffer>;
+}
+interface RngOpts {
+    rng?(arg0: number): Buffer;
 }
 export {};

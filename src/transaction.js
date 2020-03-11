@@ -1,7 +1,7 @@
 'use strict';
 Object.defineProperty(exports, '__esModule', { value: true });
-const bufferutils = require('./bufferutils');
 const bufferutils_1 = require('./bufferutils');
+const confidential_1 = require('./confidential');
 const bcrypto = require('./crypto');
 const bscript = require('./script');
 const script_1 = require('./script');
@@ -27,8 +27,6 @@ const OUTPOINT_ISSUANCE_FLAG = (1 << 31) >>> 0;
 const OUTPOINT_PEGIN_FLAG = (1 << 30) >>> 0;
 const OUTPOINT_INDEX_MASK = 0x3fffffff;
 const MINUS_1 = 4294967295;
-// const CONFIDENTIAL_COMMITMENT = 33; // default size of confidential commitments (i.e. asset, value, nonce)
-const CONFIDENTIAL_VALUE = 9; // explicit size of confidential values
 const VALUE_UINT64_MAX = Buffer.from('ffffffffffffffff', 'hex');
 const BLANK_OUTPUT = {
   script: EMPTY_SCRIPT,
@@ -87,8 +85,8 @@ class Transaction {
       const script = bufferReader.readVarSlice();
       let amountCommitment;
       let amount;
-      if (isUnconfidentialValue(value)) {
-        amount = confidentialValueToSatoshi(value);
+      if (confidential_1.isUnconfidentialValue(value)) {
+        amount = confidential_1.confidentialValueToSatoshi(value);
       } else amountCommitment = value.toString('hex');
       tx.outs.push({
         asset,
@@ -123,9 +121,6 @@ class Transaction {
         tx.outs[i].rangeProof = rangeProof;
         tx.outs[i].surjectionProof = surjectionProof;
       }
-      // was this pointless?
-      if (!tx.hasWitnesses())
-        throw new Error('Transaction has superfluous witness data');
     }
     if (_NO_STRICT) return tx;
     if (bufferReader.offset !== buffer.length)
@@ -246,9 +241,12 @@ class Transaction {
   }
   hasWitnesses() {
     return (
-      this.flag === 1 &&
+      this.flag === 1 ||
       this.ins.some(x => {
         return x.witness.length !== 0;
+      }) ||
+      this.outs.some(x => {
+        return x.rangeProof.length !== 0 && x.surjectionProof.length !== 0;
       })
     );
   }
@@ -656,13 +654,18 @@ class Transaction {
     });
     bufferWriter.writeVarInt(this.outs.length);
     this.outs.forEach(txOut => {
+      // if we are serializing a confidential output for producing a signature,
+      // we must exclude the confidential value from the serialization and
+      // use the satoshi 0 value instead, as done for typical bitcoin witness signatures.
+      const val = forSignature && hasWitnesses ? Buffer.alloc(0) : txOut.value;
       bufferWriter.writeSlice(txOut.asset);
-      bufferWriter.writeSlice(txOut.value);
+      bufferWriter.writeSlice(val);
       bufferWriter.writeSlice(txOut.nonce);
+      if (forSignature && hasWitnesses) bufferWriter.writeUInt64(0);
       bufferWriter.writeVarSlice(txOut.script);
     });
     bufferWriter.writeUInt32(this.locktime);
-    if (hasWitnesses) {
+    if (!forSignature && hasWitnesses) {
       this.ins.forEach(input => {
         bufferWriter.writeConfidentialInFields(input);
       });
@@ -684,29 +687,3 @@ Transaction.SIGHASH_ANYONECANPAY = 0x80;
 Transaction.ADVANCED_TRANSACTION_MARKER = 0x00;
 Transaction.ADVANCED_TRANSACTION_FLAG = 0x01;
 exports.Transaction = Transaction;
-function confidentialValueToSatoshi(value) {
-  if (value.length !== CONFIDENTIAL_VALUE && value.readUInt8(0) !== 1) {
-    throw new Error(
-      'Value must be unconfidential, length or the prefix are not valid',
-    );
-  }
-  const reverseValueBuffer = Buffer.allocUnsafe(CONFIDENTIAL_VALUE - 1);
-  value.slice(1, CONFIDENTIAL_VALUE).copy(reverseValueBuffer, 0);
-  bufferutils_1.reverseBuffer(reverseValueBuffer);
-  return bufferutils.readUInt64LE(reverseValueBuffer, 0);
-}
-exports.confidentialValueToSatoshi = confidentialValueToSatoshi;
-function satoshiToConfidentialValue(amount) {
-  const unconfPrefix = Buffer.allocUnsafe(1);
-  const valueBuffer = Buffer.allocUnsafe(CONFIDENTIAL_VALUE - 1);
-  unconfPrefix.writeUInt8(1, 0);
-  bufferutils.writeUInt64LE(valueBuffer, amount, 0);
-  return Buffer.concat([
-    unconfPrefix,
-    bufferutils_1.reverseBuffer(valueBuffer),
-  ]);
-}
-exports.satoshiToConfidentialValue = satoshiToConfidentialValue;
-function isUnconfidentialValue(value) {
-  return value.length === CONFIDENTIAL_VALUE && value.readUIntLE(0, 1) === 1;
-}

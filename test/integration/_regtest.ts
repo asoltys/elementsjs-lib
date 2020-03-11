@@ -1,6 +1,6 @@
 import Axios from 'axios';
 
-const APIURL = process.env.APIURL || 'https://regtest.nigiri.network/api';
+const APIURL = process.env.APIURL || 'http://localhost:3001';
 
 export async function faucet(address: string): Promise<any> {
   const resp = await Axios.post(`${APIURL}/faucet`, { address });

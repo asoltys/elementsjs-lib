@@ -31,13 +31,21 @@ describe('confidential', () => {
 
   it('valueBlindingFactor', () => {
     fixtures.valid.valueBlindingFactor.forEach((f: any) => {
-      const generators = f.generators.map((v: any) => Buffer.from(v, 'hex'));
-      const factors = f.factors.map((v: any) => Buffer.from(v, 'hex'));
+      const inGenerators = f.inGenerators.map((v: any) =>
+        Buffer.from(v, 'hex'),
+      );
+      const outGenerators = f.outGenerators.map((v: any) =>
+        Buffer.from(v, 'hex'),
+      );
+      const inFactors = f.inFactors.map((v: any) => Buffer.from(v, 'hex'));
+      const outFactors = f.outFactors.map((v: any) => Buffer.from(v, 'hex'));
       const vbf = confidential.valueBlindingFactor(
-        f.values,
-        f.nInputs,
-        generators,
-        factors,
+        f.inValues,
+        f.outValues,
+        inGenerators,
+        outGenerators,
+        inFactors,
+        outFactors,
       );
       assert.strictEqual(vbf.toString('hex'), f.expected);
     });

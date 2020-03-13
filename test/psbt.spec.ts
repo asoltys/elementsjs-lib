@@ -33,27 +33,14 @@ describe('Psbt', () => {
       it('Creates expected PSBT', () => {
         const psbt = new Psbt();
         for (const input of f.inputs) {
-          const script =
-            input.script.length > 0
-              ? Buffer.from(input.script, 'hex')
-              : Buffer.alloc(0);
-          psbt.addInput({ ...input, script });
+          psbt.addInput(input);
         }
         for (const output of f.outputs) {
-          const asset = Buffer.concat([
-            Buffer.from('01', 'hex'),
-            Buffer.from(output.asset, 'hex').reverse(),
-          ]);
-          const value = satoshiToConfidentialValue(output.amount);
-          const nonce = Buffer.from(
-            output.nonce.length > 0 ? output.nonce : '00',
-            'hex',
-          );
           const script =
             output.script.length > 0
               ? bscript.fromASM(output.script)
-              : Buffer.alloc(0);
-          psbt.addOutput({ asset, value, nonce, script });
+              : output.script;
+          psbt.addOutput({ ...output, script });
         }
         assert.strictEqual(psbt.toBase64(), f.result);
       });
@@ -73,23 +60,6 @@ describe('Psbt', () => {
                 data.hasOwnProperty('redeemScript')
               ) {
                 data.redeemScript = Buffer.from(data.redeemScript, 'hex');
-              }
-              if (
-                typeof data === 'object' &&
-                data.hasOwnProperty('witnessUtxo')
-              ) {
-                data.witnessUtxo.script = Buffer.from(
-                  data.witnessUtxo.script,
-                  'hex',
-                );
-                data.witnessUtxo.value = satoshiToConfidentialValue(
-                  data.witnessUtxo.amount,
-                );
-                data.witnessUtxo.nonce = Buffer.from('00', 'hex');
-                data.witnessUtxo.asset = Buffer.concat([
-                  Buffer.from('01', 'hex'),
-                  Buffer.from(data.witnessUtxo.asset, 'hex').reverse(),
-                ]);
               }
               (psbt as any)[`update${txt}`](i, data);
             }

@@ -497,6 +497,54 @@ class Psbt {
     return this;
   }
   updateInput(inputIndex, updateData) {
+    if (updateData.witnessUtxo) {
+      const { witnessUtxo } = updateData;
+      const script = Buffer.isBuffer(witnessUtxo.script)
+        ? witnessUtxo.script
+        : Buffer.from(witnessUtxo.script, 'hex');
+      const value = Buffer.isBuffer(witnessUtxo.value)
+        ? witnessUtxo.value
+        : typeof witnessUtxo.value === 'string'
+        ? Buffer.from(witnessUtxo.value, 'hex')
+        : confidential.satoshiToConfidentialValue(witnessUtxo.value);
+      // if the asset is a string, by checking the first byte we can determine if
+      // it's an asset commitment, in this case we decode the hex string as buffer,
+      // or if it's an asset hash, in this case we put the unconf prefix in front of the reversed the buffer
+      const asset = Buffer.isBuffer(witnessUtxo.asset)
+        ? witnessUtxo.asset
+        : witnessUtxo.asset.startsWith('0a') ||
+          witnessUtxo.asset.startsWith('0b')
+        ? Buffer.from(witnessUtxo.asset, 'hex')
+        : Buffer.concat([
+            Buffer.alloc(1, 1),
+            bufferutils_1.reverseBuffer(Buffer.from(witnessUtxo.asset, 'hex')),
+          ]);
+      const nonce = witnessUtxo.nonce
+        ? Buffer.isBuffer(witnessUtxo.nonce)
+          ? witnessUtxo.nonce
+          : Buffer.from(witnessUtxo.nonce, 'hex')
+        : Buffer.alloc(1, 0);
+      const rangeProof = witnessUtxo.rangeProof
+        ? Buffer.isBuffer(witnessUtxo.rangeProof)
+          ? witnessUtxo.rangeProof
+          : Buffer.from(witnessUtxo.rangeProof, 'hex')
+        : undefined;
+      const surjectionProof = witnessUtxo.surjectionProof
+        ? Buffer.isBuffer(witnessUtxo.surjectionProof)
+          ? witnessUtxo.surjectionProof
+          : Buffer.from(witnessUtxo.surjectionProof, 'hex')
+        : undefined;
+      updateData = Object.assign(updateData, {
+        witnessUtxo: {
+          script,
+          value,
+          asset,
+          nonce,
+          rangeProof,
+          surjectionProof,
+        },
+      });
+    }
     this.data.updateInput(inputIndex, updateData);
     if (updateData.nonWitnessUtxo) {
       addNonWitnessTxCache(
@@ -697,13 +745,28 @@ class PsbtTransaction {
   addOutput(output) {
     if (
       output.script === undefined ||
+      (!Buffer.isBuffer(output.script) && typeof output.script !== 'string') ||
       output.value === undefined ||
-      !Buffer.isBuffer(output.script) ||
-      !Buffer.isBuffer(output.value)
+      (!Buffer.isBuffer(output.value) && typeof output.value !== 'number') ||
+      output.asset === undefined ||
+      (!Buffer.isBuffer(output.asset) && typeof output.asset !== 'string')
     ) {
       throw new Error('Error adding output.');
     }
-    this.tx.addOutput(output.script, output.value, output.asset, output.nonce);
+    const nonce = Buffer.alloc(1, 0);
+    const script = Buffer.isBuffer(output.script)
+      ? output.script
+      : Buffer.from(output.script, 'hex');
+    const value = Buffer.isBuffer(output.value)
+      ? output.value
+      : confidential.satoshiToConfidentialValue(output.value);
+    const asset = Buffer.isBuffer(output.asset)
+      ? output.asset
+      : Buffer.concat([
+          Buffer.alloc(1, 1),
+          bufferutils_1.reverseBuffer(Buffer.from(output.asset, 'hex')),
+        ]);
+    this.tx.addOutput(script, value, asset, nonce);
   }
   toBuffer() {
     return this.tx.toBuffer();

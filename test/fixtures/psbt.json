@@ -149,26 +149,22 @@
         "inputs": [
           {
             "hash": "9d64f0343e264f9992aa024185319b349586ec4cbbfcedcda5a05678ab10e580",
-            "index": 0,
-            "script": ""
+            "index": 0
           }
         ],
         "outputs": [
           {
-            "nonce": "",
-            "amount": 50000000,
+            "value": 50000000,
             "script": "OP_DUP OP_HASH160 39397080b51ef22c59bd7469afacffbeec0da12e OP_EQUALVERIFY OP_CHECKSIG",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           },
           {
-            "nonce": "",
-            "amount": 49999100,
+            "value": 49999100,
             "script": "OP_DUP OP_HASH160 659bedb5d3d3c7ab12d7f85323c3a1b6c060efbe OP_EQUALVERIFY OP_CHECKSIG",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           },
           {
-            "nonce": "",
-            "amount": 500,
+            "value": 500,
             "script": "",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           }
@@ -179,31 +175,26 @@
         "inputs": [
           {
             "hash": "404015a2b064616e412a62c1b5760f4f953f705016efee584cc8ac5d3b1764e7",
-            "index": 1,
-            "script": ""
+            "index": 1
           },
           {
             "hash": "2825e7accc2999fc61b4b0ae6586476b8c63433f29d89523532e7722976aef38",
-            "index": 1,
-            "script": ""
+            "index": 1
           }
         ],
         "outputs": [
           {
-            "nonce": "",
-            "amount": 120000000,
+            "value": 120000000,
             "script": "OP_DUP OP_HASH160 39397080b51ef22c59bd7469afacffbeec0da12e OP_EQUALVERIFY OP_CHECKSIG",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           },
           {
-            "nonce": "",
-            "amount": 79999400,
+            "value": 79999400,
             "script": "OP_DUP OP_HASH160 50a410115f0a7d8a99472e47d1928ff8086948c8 OP_EQUALVERIFY OP_CHECKSIG",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           },
           {
-            "nonce": "",
-            "amount": 600,
+            "value": 600,
             "script": "",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           }
@@ -214,26 +205,22 @@
         "inputs": [
           {
             "hash": "52439251d19b8e9572dd8cd91f176be66ed42f3fbadd5554b9cc892f13e94c7c",
-            "index": 1,
-            "script": ""
+            "index": 1
           }
         ],
         "outputs": [
           {
-            "nonce": "",
-            "amount": 120000000,
+            "value": 120000000,
             "script": "OP_DUP OP_HASH160 39397080b51ef22c59bd7469afacffbeec0da12e OP_EQUALVERIFY OP_CHECKSIG",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           },
           {
-            "nonce": "",
-            "amount": 79999400,
+            "value": 79999400,
             "script": "OP_DUP OP_HASH160 50a410115f0a7d8a99472e47d1928ff8086948c8 OP_EQUALVERIFY OP_CHECKSIG",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           },
           {
-            "nonce": "",
-            "amount": 600,
+            "value": 600,
             "script": "",
             "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
           }
@@ -288,8 +275,7 @@
           {
             "witnessUtxo": {
               "script": "a9147d017ff5536928454497fa1a24f3bfa046a2ae5887",
-              "amount": 200000000,
-              "nonce": "",
+              "value": 200000000,
               "asset": "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225"
             },
             "redeemScript": "00140e144f2b8cf418e202abe6b1fcbd37dd1b6460d7",
@@ -410,7 +396,7 @@
   "addOutput": {
     "checks": [
       {
-        "description": "Checks value is buffer",
+        "description": "Checks value is buffer or number",
         "outputData": {
           "script": "76a91439397080b51ef22c59bd7469afacffbeec0da12e88ac",
           "value": "xyz",

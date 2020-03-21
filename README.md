@@ -28,3 +28,9 @@ The below examples are implemented as integration tests (as in [bitcoinjs-lib](h
 - [Create (and broadcast via 3PBP) a confidential Transaction, with a SegWit 3-of-4 P2SH(P2WSH(multisig) input](./test/integration/transaction.spec.ts#L1160)
 - [Create (and broadcast via 3PBP) a Transaction and sign with an HDSigner interface (bip32)](./test/integration/transaction.spec.ts#L1385)
 - [Create (and broadcast via 3PBP) a confidential Transaction and sign with an HDSigner interface (bip32)](./test/integration/transaction.spec.ts#L1454)
+
+## Bundle
+
+```sh
+$ browserify src/index.js --standalone liquid > bundle.js
+```

@@ -185,12 +185,18 @@ describe('address', () => {
   describe('toOutputScript', () => {
     fixtures.standard.forEach(f => {
       it('decodes ' + f.script.slice(0, 30) + '... (' + f.network + ')', () => {
-        const script = baddress.toOutputScript(
+        let script = baddress.toOutputScript(
           (f.base58check || f.bech32)!,
           NETWORKS[f.network],
         );
 
         assert.strictEqual(bscript.toASM(script), f.script);
+
+        script = baddress.toOutputScript(
+          f.confidentialAddress,
+          NETWORKS[f.network],
+        );
+        assert.deepStrictEqual(bscript.toASM(script), f.script);
       });
     });
 

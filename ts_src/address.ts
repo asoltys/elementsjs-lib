@@ -140,6 +140,7 @@ export function toOutputScript(address: string, network?: Network): Buffer {
 
   let decodeBase58: Base58CheckResult | undefined;
   let decodeBech32: Bech32Result | undefined;
+  let decodeConfidential: ConfidentialResult | undefined;
   try {
     decodeBase58 = fromBase58Check(address);
   } catch (e) {}
@@ -162,6 +163,17 @@ export function toOutputScript(address: string, network?: Network): Buffer {
           return payments.p2wpkh({ hash: decodeBech32.data }).output as Buffer;
         if (decodeBech32.data.length === 32)
           return payments.p2wsh({ hash: decodeBech32.data }).output as Buffer;
+      }
+    } else {
+      try {
+        decodeConfidential = fromConfidential(address);
+      } catch (e) {}
+
+      if (decodeConfidential) {
+        return toOutputScript(
+          decodeConfidential.unconfidentialAddress,
+          network,
+        );
       }
     }
   }

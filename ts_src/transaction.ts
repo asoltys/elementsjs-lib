@@ -1,8 +1,4 @@
 import { BufferReader, BufferWriter, reverseBuffer } from './bufferutils';
-import {
-  confidentialValueToSatoshi,
-  isUnconfidentialValue,
-} from './confidential';
 import * as bcrypto from './crypto';
 import * as bscript from './script';
 import { OPS as opcodes } from './script';
@@ -45,8 +41,6 @@ export interface Output {
   value: Buffer;
   asset: Buffer;
   nonce: Buffer;
-  amount?: number;
-  amountCommitment?: string;
   rangeProof?: Buffer;
   surjectionProof?: Buffer;
 }
@@ -125,20 +119,11 @@ export class Transaction {
       const nonce = bufferReader.readConfidentialNonce();
       const script = bufferReader.readVarSlice();
 
-      let amountCommitment: string | undefined;
-      let amount: number | undefined;
-
-      if (isUnconfidentialValue(value)) {
-        amount = confidentialValueToSatoshi(value);
-      } else amountCommitment = value.toString('hex');
-
       tx.outs.push({
         asset,
         value,
         nonce,
         script,
-        amount,
-        amountCommitment,
         rangeProof: EMPTY_SCRIPT,
         surjectionProof: EMPTY_SCRIPT,
       });
@@ -376,8 +361,6 @@ export class Transaction {
         value: txOut.value,
         asset: txOut.asset,
         nonce: txOut.nonce,
-        amount: (txOut as Output).amount,
-        amountCommitment: (txOut as Output).amountCommitment,
         rangeProof: txOut.rangeProof,
         surjectionProof: txOut.surjectionProof,
       };

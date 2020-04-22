@@ -26,7 +26,6 @@ async function buildAndSign(
     .addInput({
       hash: unspent.txid,
       index: unspent.vout,
-      script: Buffer.alloc(0),
       nonWitnessUtxo: Buffer.from(txHex, 'hex'),
       ...(redeemScript ? { redeemScript } : {}),
       ...(witnessScript ? { witnessScript } : {}),

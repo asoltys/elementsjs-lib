@@ -3,8 +3,6 @@ export interface Output {
     value: Buffer;
     asset: Buffer;
     nonce: Buffer;
-    amount?: number;
-    amountCommitment?: string;
     rangeProof?: Buffer;
     surjectionProof?: Buffer;
 }

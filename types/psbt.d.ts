@@ -2,7 +2,7 @@ import { Psbt as PsbtBase } from 'bip174';
 import { KeyValue, PsbtGlobalUpdate, PsbtInput, PsbtInputUpdate, PsbtOutput, PsbtOutputUpdate, TransactionInput } from 'bip174/src/lib/interfaces';
 import { Signer, SignerAsync } from './ecpair';
 import { Network } from './networks';
-import { Issuance, Transaction } from './transaction';
+import { Transaction } from './transaction';
 /**
  * Psbt class can parse and generate a PSBT binary based off of the BIP174.
  * There are 6 roles that this class fulfills. (Explained in BIP174)
@@ -86,17 +86,19 @@ interface PsbtOptsOptional {
     maximumFeeRate?: number;
 }
 interface PsbtInputExtended extends PsbtInput, TransactionInput {
-    script: Buffer;
-    isPegin?: boolean;
-    issuance?: Issuance;
 }
-interface PsbtOutputExtended extends PsbtOutput {
-    asset: Buffer;
-    value: Buffer;
-    nonce: Buffer;
-    script: Buffer;
-    amount?: number;
-    amountCommitment?: string;
+declare type PsbtOutputExtended = PsbtOutputExtendedScript | PsbtOutputExtendedAddress;
+interface PsbtOutputExtendedScript extends PsbtOutput {
+    script: string | Buffer;
+    asset: string | Buffer;
+    value: number | Buffer;
+    nonce?: string | Buffer;
+}
+interface PsbtOutputExtendedAddress extends PsbtOutput {
+    address: string;
+    asset: string | Buffer;
+    value: number | Buffer;
+    nonce?: string | Buffer;
 }
 interface HDSignerBase {
     /**

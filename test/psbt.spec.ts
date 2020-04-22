@@ -363,7 +363,6 @@ describe('Psbt', () => {
         hash:
           '0000000000000000000000000000000000000000000000000000000000000000',
         index: 0,
-        script: Buffer.alloc(0),
       });
       assert.throws(() => {
         psbt.finalizeAllInputs();
@@ -477,7 +476,6 @@ describe('Psbt', () => {
         hash:
           '0000000000000000000000000000000000000000000000000000000000000000',
         index: 0,
-        script: Buffer.alloc(0),
       });
 
       assert.strictEqual(psbt.inputCount, 1);
@@ -495,7 +493,6 @@ describe('Psbt', () => {
         hash:
           '0000000000000000000000000000000000000000000000000000000000000000',
         index: 0,
-        script: Buffer.alloc(0),
       });
 
       assert.throws(() => {
@@ -582,7 +579,6 @@ describe('Psbt', () => {
     psbt.addInput({
       hash: '9d64f0343e264f9992aa024185319b349586ec4cbbfcedcda5a05678ab10e580',
       index: 0,
-      script: Buffer.alloc(0),
       nonWitnessUtxo: Buffer.from(
         '0200000000010caf381d44f094661f2da71a11946251a27d656d6c141577e27c483a6' +
           'd428f01010000006a47304402205ac99f5988d699d6d9f72004098c2e52c8f342838e' +
@@ -637,14 +633,14 @@ describe('Psbt', () => {
   //     const psbt = Psbt.fromBuffer(
   //       Buffer.from(
   //         '70736274ff01000a01000000000000000000000000',
-  //         'hex', // cHNidP8BAAoBAAAAAAAAAAAAAAAA
+  //         'hex', // cHNldP8BAAoBAAAAAAAAAAAAAAAA
   //       ),
   //     );
   //     assert.strictEqual(psbt instanceof Psbt, true);
   //     assert.ok((psbt as any).__CACHE.__TX);
   //   });
   //   it('fromBase64 returns Psbt type (not base class)', () => {
-  //     const psbt = Psbt.fromBase64('cHNidP8BAAoBAAAAAAAAAAAAAAAA');
+  //     const psbt = Psbt.fromBase64('cHNldP8BAAoBAAAAAAAAAAAAAAAA');
   //     assert.strictEqual(psbt instanceof Psbt, true);
   //     assert.ok((psbt as any).__CACHE.__TX);
   //   });

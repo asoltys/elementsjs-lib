@@ -34,7 +34,6 @@ describe('liquidjs-lib (transactions with psbt)', () => {
       // if hash is string, txid, if hash is Buffer, is reversed compared to txid
       hash: '9d64f0343e264f9992aa024185319b349586ec4cbbfcedcda5a05678ab10e580',
       index: 0,
-      script: Buffer.alloc(0),
       // non-segwit inputs now require passing the whole previous tx as Buffer
       nonWitnessUtxo: Buffer.from(
         '0200000000010caf381d44f094661f2da71a11946251a27d656d6c141577e27c483a6' +
@@ -127,7 +126,6 @@ describe('liquidjs-lib (transactions with psbt)', () => {
       // if hash is string, txid, if hash is Buffer, is reversed compared to txid
       hash: 'dd983c9c0419fce6bcc0eaf875b54a2c19f9d6e761faa58b1afd199638275475',
       index: 0,
-      script: Buffer.alloc(0),
       // non-segwit inputs now require passing the whole previous tx as Buffer
       nonWitnessUtxo: Buffer.from(
         '020000000101bb6d18772599ae3ad9c44c524d63b666747c1c195c6f516a41a8d5f4a' +
@@ -1591,12 +1589,6 @@ function createPayment(
   };
 }
 
-function getWitnessUtxo(out: any): any {
-  delete out.amount;
-  delete out.amountCommitment;
-  return out;
-}
-
 function getAddress(script: any, scriptType: string): string {
   if (scriptType === 'p2sh') {
     return liquid.address.toBase58Check(
@@ -1621,12 +1613,11 @@ async function getInputData(
   const utx = await regtestUtils.fetchUtxo(unspent.txid);
   // this is needed to eventually retrieve confidential proofs from tx outputs
   const prevTx = liquid.Transaction.fromHex(utx.txHex);
-  const prevout = prevTx.outs[unspent.vout];
 
   // for non segwit inputs, you must pass the full transaction buffer
   const nonWitnessUtxo = Buffer.from(utx.txHex, 'hex');
-  // for segwit inputs, you only need the output script and value as an object.
-  const witnessUtxo = getWitnessUtxo(prevout);
+  const witnessUtxo = prevTx.outs[unspent.vout];
+
   const mixin = isSegwit ? { witnessUtxo } : { nonWitnessUtxo };
   const mixin2: any = {};
   switch (redeemType) {

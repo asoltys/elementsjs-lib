@@ -1,7 +1,6 @@
 'use strict';
 Object.defineProperty(exports, '__esModule', { value: true });
 const bufferutils_1 = require('./bufferutils');
-const confidential_1 = require('./confidential');
 const bcrypto = require('./crypto');
 const bscript = require('./script');
 const script_1 = require('./script');
@@ -83,18 +82,11 @@ class Transaction {
       const value = bufferReader.readConfidentialValue();
       const nonce = bufferReader.readConfidentialNonce();
       const script = bufferReader.readVarSlice();
-      let amountCommitment;
-      let amount;
-      if (confidential_1.isUnconfidentialValue(value)) {
-        amount = confidential_1.confidentialValueToSatoshi(value);
-      } else amountCommitment = value.toString('hex');
       tx.outs.push({
         asset,
         value,
         nonce,
         script,
-        amount,
-        amountCommitment,
         rangeProof: EMPTY_SCRIPT,
         surjectionProof: EMPTY_SCRIPT,
       });
@@ -288,8 +280,6 @@ class Transaction {
         value: txOut.value,
         asset: txOut.asset,
         nonce: txOut.nonce,
-        amount: txOut.amount,
-        amountCommitment: txOut.amountCommitment,
         rangeProof: txOut.rangeProof,
         surjectionProof: txOut.surjectionProof,
       };

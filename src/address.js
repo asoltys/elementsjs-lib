@@ -96,6 +96,7 @@ function toOutputScript(address, network) {
   network = network || networks.liquid;
   let decodeBase58;
   let decodeBech32;
+  let decodeConfidential;
   try {
     decodeBase58 = fromBase58Check(address);
   } catch (e) {}
@@ -116,6 +117,16 @@ function toOutputScript(address, network) {
           return payments.p2wpkh({ hash: decodeBech32.data }).output;
         if (decodeBech32.data.length === 32)
           return payments.p2wsh({ hash: decodeBech32.data }).output;
+      }
+    } else {
+      try {
+        decodeConfidential = fromConfidential(address);
+      } catch (e) {}
+      if (decodeConfidential) {
+        return toOutputScript(
+          decodeConfidential.unconfidentialAddress,
+          network,
+        );
       }
     }
   }

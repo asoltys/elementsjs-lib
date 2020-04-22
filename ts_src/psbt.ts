@@ -26,7 +26,7 @@ import {
 import { liquid as btcNetwork, Network } from './networks';
 import * as payments from './payments';
 import * as bscript from './script';
-import { Issuance, Output, Transaction } from './transaction';
+import { Output, Transaction } from './transaction';
 const _randomBytes = require('randombytes');
 
 /**
@@ -846,19 +846,22 @@ interface PsbtOpts {
   maximumFeeRate: number;
 }
 
-interface PsbtInputExtended extends PsbtInput, TransactionInput {
-  script: Buffer;
-  isPegin?: boolean;
-  issuance?: Issuance;
+interface PsbtInputExtended extends PsbtInput, TransactionInput {}
+
+type PsbtOutputExtended = PsbtOutputExtendedScript | PsbtOutputExtendedAddress;
+
+interface PsbtOutputExtendedScript extends PsbtOutput {
+  script: string | Buffer;
+  asset: string | Buffer;
+  value: number | Buffer;
+  nonce?: string | Buffer;
 }
 
-interface PsbtOutputExtended extends PsbtOutput {
-  asset: Buffer;
-  value: Buffer;
-  nonce: Buffer;
-  script: Buffer;
-  amount?: number;
-  amountCommitment?: string;
+interface PsbtOutputExtendedAddress extends PsbtOutput {
+  address: string;
+  asset: string | Buffer;
+  value: number | Buffer;
+  nonce?: string | Buffer;
 }
 
 interface HDSignerBase {

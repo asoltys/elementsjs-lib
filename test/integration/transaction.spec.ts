@@ -525,6 +525,162 @@ describe('liquidjs-lib (transactions with psbt)', () => {
     // to build and broadcast to the actual Bitcoin network, see https://github.com/bitcoinjs/bitcoinjs-lib/issues/839
   });
 
+  it(
+    'can create (and broadcast via 3PBP) a confidential Transaction' +
+      ' with confidential AND unconfidential outputs',
+    async () => {
+      // these are { payment: Payment; keys: ECPair[] }
+      const alicePayment = createPayment('p2pkh', undefined, undefined, true); // confidential
+      const bobPayment = createPayment('p2pkh', undefined, undefined, false); // unconfidential
+
+      const aliceBlindingPubKey = liquid.ECPair.fromPrivateKey(
+        alicePayment.blindingKeys[0],
+      ).publicKey!;
+
+      const aliceBlindingPrivateKey: Buffer = alicePayment.blindingKeys[0];
+
+      // give Alice unspent outputs
+      const inputData1 = await getInputData(
+        alicePayment.payment,
+        false,
+        'noredeem',
+      );
+      {
+        const {
+          hash, // string of txid or Buffer of tx hash. (txid and hash are reverse order)
+          index, // the output index of the txo you are spending
+          nonWitnessUtxo, // the full previous transaction as a Buffer
+        } = inputData1;
+        assert.deepStrictEqual({ hash, index, nonWitnessUtxo }, inputData1);
+      }
+
+      // network is only needed if you pass an address to addOutput
+      // using script (Buffer of scriptPubkey) instead will avoid needed network.
+      const psbt = new liquid.Psbt({ network: regtest })
+        .addInput(inputData1) // alice unspent
+        .addOutput({
+          asset,
+          nonce,
+          script: bobPayment.payment.output,
+          value: satoshiToConfidentialValue(50000000),
+        }) // the actual spend to bob
+        .addOutput({
+          asset,
+          nonce,
+          script: alicePayment.payment.output,
+          value: satoshiToConfidentialValue(29993000),
+        }) // Alice's change
+        .addOutput({
+          asset,
+          nonce,
+          script: alicePayment.payment.output,
+          value: satoshiToConfidentialValue(20000000),
+        }) // Alice's change bis
+        .addOutput({
+          asset,
+          nonce,
+          script: Buffer.alloc(0),
+          value: satoshiToConfidentialValue(7000),
+        }) // fees in Liquid are explicit
+        .blindOutputsByIndex(
+          new Map().set(0, aliceBlindingPrivateKey),
+          new Map().set(1, aliceBlindingPubKey).set(2, aliceBlindingPubKey),
+        )
+        .signAllInputs(alicePayment.keys[0]);
+
+      assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
+      psbt.finalizeAllInputs();
+
+      // build and broadcast our RegTest network
+      await regtestUtils.broadcast(psbt.extractTransaction().toHex());
+    },
+  );
+
+  it(
+    'can create (and broadcast via 3PBP) a confidential Transaction' +
+      ' with confidential AND unconfidential inputs',
+    async () => {
+      // these are { payment: Payment; keys: ECPair[] }
+      const alicePaymentUnconfidential = createPayment(
+        'p2pkh',
+        undefined,
+        undefined,
+        false,
+      ); // unconfidential
+      const alicePaymentConfidential = createPayment(
+        'p2pkh',
+        undefined,
+        undefined,
+        true,
+      ); // confidential
+      const bobPayment = createPayment('p2pkh', undefined, undefined, false); // unconfidential
+
+      const aliceBlindingPubKey = liquid.ECPair.fromPrivateKey(
+        alicePaymentConfidential.blindingKeys[0],
+      ).publicKey!;
+
+      const aliceBlindingPrivateKey: Buffer =
+        alicePaymentConfidential.blindingKeys[0];
+
+      // give Alice unspent outputs
+      const inputDataUnconfidential = await getInputData(
+        alicePaymentUnconfidential.payment,
+        false,
+        'noredeem',
+      );
+
+      const inputDataConfidential = await getInputData(
+        alicePaymentConfidential.payment,
+        false,
+        'noredeem',
+      );
+
+      // network is only needed if you pass an address to addOutput
+      // using script (Buffer of scriptPubkey) instead will avoid needed network.
+      const psbt = new liquid.Psbt({ network: regtest })
+        .addInput(inputDataUnconfidential) // alice unspent (unconfidential)
+        .addInput(inputDataConfidential) // alice unspent (confidential)
+        .addOutput({
+          asset,
+          nonce,
+          script: bobPayment.payment.output,
+          value: satoshiToConfidentialValue(99993000),
+        }) // the actual spend to bob
+        .addOutput({
+          asset,
+          nonce,
+          script: alicePaymentConfidential.payment.output,
+          value: satoshiToConfidentialValue(99999000),
+        }) // Alice's change
+        .addOutput({
+          asset,
+          nonce,
+          script: alicePaymentConfidential.payment.output,
+          value: satoshiToConfidentialValue(1000),
+        }) // Alice's change bis (need two blind outputs)
+        .addOutput({
+          asset,
+          nonce,
+          script: Buffer.alloc(0),
+          value: satoshiToConfidentialValue(7000),
+        }) // fees in Liquid are explicit
+        .blindOutputsByIndex(
+          new Map().set(1, aliceBlindingPrivateKey),
+          new Map().set(1, aliceBlindingPubKey).set(2, aliceBlindingPubKey),
+        )
+        .signInput(0, alicePaymentUnconfidential.keys[0])
+        .signInput(1, alicePaymentConfidential.keys[0]);
+
+      assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
+      assert.strictEqual(psbt.validateSignaturesOfInput(1), true);
+
+      psbt.finalizeAllInputs();
+
+      // build and broadcast our RegTest network
+      await regtestUtils.broadcast(psbt.extractTransaction().toHex());
+    },
+  );
+
   it('can create (and broadcast via 3PBP) a Transaction with an OP_RETURN output', async () => {
     const alice1 = createPayment('p2pkh');
     const inputData1 = await getInputData(alice1.payment, false, 'noredeem');

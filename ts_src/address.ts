@@ -136,7 +136,7 @@ export function fromOutputScript(output: Buffer, network?: Network): string {
 }
 
 export function toOutputScript(address: string, network?: Network): Buffer {
-  network = network || networks.liquid;
+  network = network || getNetwork(address);
 
   let decodeBase58: Base58CheckResult | undefined;
   let decodeBech32: Bech32Result | undefined;
@@ -181,7 +181,7 @@ export function toOutputScript(address: string, network?: Network): Buffer {
   throw new Error(address + ' has no matching Script');
 }
 
-function getNetwork(address: string): Network {
+export function getNetwork(address: string): Network {
   if (
     address.startsWith(networks.liquid.blech32) ||
     address.startsWith(networks.liquid.bech32)

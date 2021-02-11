@@ -1,6 +1,10 @@
-import { Psbt as PsbtBase } from 'bip174';
+import * as bscript from './script';
+import * as confidential from './confidential';
+import * as payments from './payments';
 import * as varuint from 'bip174/src/lib/converter/varint';
+
 import {
+  Transaction as ITransaction,
   KeyValue,
   PartialSig,
   PsbtGlobalUpdate,
@@ -8,26 +12,25 @@ import {
   PsbtInputUpdate,
   PsbtOutput,
   PsbtOutputUpdate,
-  Transaction as ITransaction,
   TransactionFromBuffer,
   TransactionInput,
   WitnessUtxo,
 } from 'bip174/src/lib/interfaces';
-import { checkForInput } from 'bip174/src/lib/utils';
-import { toOutputScript } from './address';
-import { reverseBuffer } from './bufferutils';
-import * as confidential from './confidential';
-import { hash160 } from './crypto';
+import { Network, liquid as btcNetwork } from './networks';
+import { Output, Transaction, ZERO } from './transaction';
 import {
-  fromPrivateKey as ecPairFromPrivateKey,
-  fromPublicKey as ecPairFromPublicKey,
   Signer,
   SignerAsync,
+  fromPrivateKey as ecPairFromPrivateKey,
+  fromPublicKey as ecPairFromPublicKey,
 } from './ecpair';
-import { liquid as btcNetwork, Network } from './networks';
-import * as payments from './payments';
-import * as bscript from './script';
-import { Output, Transaction, ZERO } from './transaction';
+
+import { Psbt as PsbtBase } from 'bip174';
+import { checkForInput } from 'bip174/src/lib/utils';
+import { hash160 } from './crypto';
+import { reverseBuffer } from './bufferutils';
+import { toOutputScript } from './address';
+
 const _randomBytes = require('randombytes');
 
 /**
@@ -660,7 +663,7 @@ export class Psbt {
     blindingDataLike: BlindingDataLike[],
     blindingPubkeys: Buffer[],
     opts?: RngOpts,
-  ): this {
+  ): Promise<this> {
     return this.rawBlindOutputs(
       blindingDataLike,
       blindingPubkeys,
@@ -673,7 +676,7 @@ export class Psbt {
     inputsBlindingData: Map<number, BlindingDataLike>,
     outputsBlindingPubKeys: Map<number, Buffer>,
     opts?: RngOpts,
-  ): this {
+  ): Promise<this> {
     const blindingPrivKeysArgs = range(this.__CACHE.__TX.ins.length).map(
       (inputIndex: number) => inputsBlindingData.get(inputIndex),
     );
@@ -713,12 +716,12 @@ export class Psbt {
     return this;
   }
 
-  private rawBlindOutputs(
+  private async rawBlindOutputs(
     blindingDataLike: BlindingDataLike[],
     blindingPubkeys: Buffer[],
     outputIndexes?: number[],
     opts?: RngOpts,
-  ): this {
+  ): Promise<this> {
     if (
       this.data.inputs.some(
         (v: PsbtInput) => !v.nonWitnessUtxo && !v.witnessUtxo,
@@ -765,8 +768,8 @@ export class Psbt {
       },
     );
 
-    const inputsBlindingData = blindingDataLike.map((data, i) =>
-      toBlindingData(data, witnesses[i]),
+    const inputsBlindingData = await Promise.all(
+      blindingDataLike.map((data, i) => toBlindingData(data, witnesses[i])),
     );
 
     // get data (satoshis & asset) outputs to blind
@@ -784,32 +787,33 @@ export class Psbt {
     });
 
     // compute the outputs blinders
-    const outputsBlindingData = computeOutputsBlindingData(
+    const outputsBlindingData = await computeOutputsBlindingData(
       inputsBlindingData,
       outputsData,
     );
 
     // use blinders to compute proofs & commitments
-    outputIndexes.forEach((outputIndex: number, indexInArray: number) => {
+    let indexInArray = 0;
+    for (const outputIndex of outputIndexes) {
       const randomSeed = randomBytes(opts);
       const ephemeralPrivKey = randomBytes(opts);
       const outputNonce = ecPairFromPrivateKey(ephemeralPrivKey).publicKey;
       const outputBlindingData = outputsBlindingData[indexInArray];
 
       // commitments
-      const assetCommitment = confidential.assetCommitment(
+      const assetCommitment = await confidential.assetCommitment(
         outputBlindingData.asset,
         outputBlindingData.assetBlindingFactor,
       );
 
-      const valueCommitment = confidential.valueCommitment(
+      const valueCommitment = await confidential.valueCommitment(
         outputBlindingData.value,
         assetCommitment,
         outputBlindingData.valueBlindingFactor,
       );
 
       // proofs
-      const rangeProof = confidential.rangeProof(
+      const rangeProof = await confidential.rangeProof(
         outputBlindingData.value,
         blindingPubkeys[indexInArray],
         ephemeralPrivKey,
@@ -820,7 +824,7 @@ export class Psbt {
         c.__TX.outs[outputIndex].script,
       );
 
-      const surjectionProof = confidential.surjectionProof(
+      const surjectionProof = await confidential.surjectionProof(
         outputBlindingData.asset,
         outputBlindingData.assetBlindingFactor,
         inputsBlindingData.map(({ asset }) => asset),
@@ -836,7 +840,8 @@ export class Psbt {
       c.__TX.setOutputNonce(outputIndex, outputNonce);
       c.__TX.setOutputRangeProof(outputIndex, rangeProof);
       c.__TX.setOutputSurjectionProof(outputIndex, surjectionProof);
-    });
+      indexInArray++;
+    }
 
     c.__FEE = undefined;
     c.__FEE_RATE = undefined;
@@ -1482,6 +1487,7 @@ interface GetScriptReturn {
   isP2SH: boolean;
   isP2WSH: boolean;
 }
+
 function getScriptFromInput(
   inputIndex: number,
   input: PsbtInput,
@@ -1752,10 +1758,10 @@ export type BlindingDataLike =
  * @param outputsData data = [satoshis, asset] of output to blind ([string Buffer])
  * @returns an array of BlindingData[] corresponding of blinders to blind outputs specified in outputsData
  */
-export function computeOutputsBlindingData(
+export async function computeOutputsBlindingData(
   inputsBlindingData: confidential.UnblindOutputResult[],
   outputsData: Array<[string, Buffer]>,
-): confidential.UnblindOutputResult[] {
+): Promise<confidential.UnblindOutputResult[]> {
   const outputsBlindingData: confidential.UnblindOutputResult[] = [];
   outputsData.slice(0, outputsData.length - 1).forEach(([satoshis, asset]) => {
     const blindingData: confidential.UnblindOutputResult = {
@@ -1798,7 +1804,7 @@ export function computeOutputsBlindingData(
   );
 
   // compute output final amount blinder
-  const finalAmountBlinder = confidential.valueBlindingFactor(
+  const finalAmountBlinder = await confidential.valueBlindingFactor(
     inputsValues,
     outputsValues,
     inputsAssetBlinders,
@@ -1818,10 +1824,10 @@ export function computeOutputsBlindingData(
  * @param blindDataLike blinding data "like" associated to a specific input I
  * @param witnessUtxo the prevout of the input I
  */
-export function toBlindingData(
+export async function toBlindingData(
   blindDataLike: BlindingDataLike,
   witnessUtxo?: WitnessUtxo,
-): confidential.UnblindOutputResult {
+): Promise<confidential.UnblindOutputResult> {
   if (!blindDataLike) {
     if (!witnessUtxo) throw new Error('need witnessUtxo');
     return getUnconfidentialWitnessUtxoBlindingData(witnessUtxo);

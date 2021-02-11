@@ -1,9 +1,12 @@
 import * as assert from 'assert';
 import * as bip32 from 'bip32';
-import { describe, it } from 'mocha';
 import * as liquid from '../..';
-import { networks as NETWORKS } from '../..';
 import * as regtestUtils from './_regtest';
+
+import { describe, it } from 'mocha';
+
+import { networks as NETWORKS } from '../..';
+
 const rng = require('randombytes');
 const { regtest } = NETWORKS;
 const {
@@ -488,7 +491,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
 
     // network is only needed if you pass an address to addOutput
     // using script (Buffer of scriptPubkey) instead will avoid needed network.
-    const psbt = new liquid.Psbt({ network: regtest })
+    let psbt = await new liquid.Psbt({ network: regtest })
       .addInput(inputData1) // alice1 unspent
       .addOutput({
         asset,
@@ -511,8 +514,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         script: Buffer.alloc(0),
         value: satoshiToConfidentialValue(7000),
       }) // fees in Liquid are explicit
-      .blindOutputs(alice1.blindingKeys, blindingPubkeys)
-      .signAllInputs(alice1.keys[0]);
+      .blindOutputs(alice1.blindingKeys, blindingPubkeys);
+
+    psbt = psbt.signAllInputs(alice1.keys[0]);
 
     // Finalizer wants to check all signatures are valid before finalizing.
     // If the finalizer wants to check for specific pubkeys, the second arg
@@ -559,7 +563,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
 
       // network is only needed if you pass an address to addOutput
       // using script (Buffer of scriptPubkey) instead will avoid needed network.
-      const psbt = new liquid.Psbt({ network: regtest })
+      let psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputData1) // alice unspent
         .addOutput({
           asset,
@@ -588,8 +592,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         .blindOutputsByIndex(
           new Map().set(0, aliceBlindingPrivateKey),
           new Map().set(1, aliceBlindingPubKey).set(2, aliceBlindingPubKey),
-        )
-        .signAllInputs(alicePayment.keys[0]);
+        );
+
+      psbt = psbt.signAllInputs(alicePayment.keys[0]);
 
       assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
       psbt.finalizeAllInputs();
@@ -640,7 +645,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
 
       // network is only needed if you pass an address to addOutput
       // using script (Buffer of scriptPubkey) instead will avoid needed network.
-      const psbt = new liquid.Psbt({ network: regtest })
+      let psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputDataUnconfidential) // alice unspent (unconfidential)
         .addInput(inputDataConfidential) // alice unspent (confidential)
         .addOutput({
@@ -670,7 +675,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         .blindOutputsByIndex(
           new Map().set(1, aliceBlindingPrivateKey),
           new Map().set(1, aliceBlindingPubKey).set(2, aliceBlindingPubKey),
-        )
+        );
+
+      psbt = psbt
         .signInput(0, alicePaymentUnconfidential.keys[0])
         .signInput(1, alicePaymentConfidential.keys[0]);
 
@@ -718,7 +725,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
 
       // network is only needed if you pass an address to addOutput
       // using script (Buffer of scriptPubkey) instead will avoid needed network.
-      const psbt = new liquid.Psbt({ network: regtest })
+      const psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputDataConfidential) // alice unspent (confidential)
         .addOutput({
           asset,
@@ -747,8 +754,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         .blindOutputsByIndex(
           new Map().set(0, inputBlindingData),
           new Map().set(1, aliceBlindingPubKey).set(2, aliceBlindingPubKey),
-        )
-        .signInput(0, alicePaymentConfidential.keys[0]);
+        );
+
+      psbt.signInput(0, alicePaymentConfidential.keys[0]);
 
       assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
 
@@ -933,10 +941,12 @@ describe('liquidjs-lib (transactions with psbt)', () => {
       value: liquid.confidential.satoshiToConfidentialValue(7000),
     };
 
-    const tx = new liquid.Psbt()
+    const psbt = await new liquid.Psbt()
       .addInputs([inputData, inputData2])
       .addOutputs([outputData, outputData2, outputData3])
-      .blindOutputs(blindingKeys, blindingPubkeys)
+      .blindOutputs(blindingKeys, blindingPubkeys);
+
+    const tx = psbt
       .signAllInputs(keyPair)
       .finalizeAllInputs()
       .extractTransaction();
@@ -999,13 +1009,16 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         script: Buffer.alloc(0),
         value: liquid.confidential.satoshiToConfidentialValue(3500),
       };
-      const tx = new liquid.Psbt()
+      const psbt = await new liquid.Psbt()
         .addInputs([inputData, inputData2])
         .addOutputs([outputData, outputData2])
-        .blindOutputs(blindingKeys, blindingPubkeys)
+        .blindOutputs(blindingKeys, blindingPubkeys);
+
+      const tx = psbt
         .signAllInputs(keyPair)
         .finalizeAllInputs()
         .extractTransaction();
+
       await regtestUtils.broadcast(tx.toHex());
     },
   );
@@ -1063,7 +1076,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
       assert.deepStrictEqual({ hash, index, witnessUtxo }, inputData);
     }
 
-    const psbt = new liquid.Psbt({ network: regtest })
+    let psbt = await new liquid.Psbt({ network: regtest })
       .addInput(inputData)
       .addOutputs([
         {
@@ -1082,8 +1095,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
           value: liquid.confidential.satoshiToConfidentialValue(3500),
         },
       ])
-      .blindOutputs(p2wpkh.blindingKeys, blindingPubkeys)
-      .signInput(0, p2wpkh.keys[0]);
+      .blindOutputs(p2wpkh.blindingKeys, blindingPubkeys);
+
+    psbt = psbt.signInput(0, p2wpkh.keys[0]);
 
     assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
     psbt.finalizeAllInputs();
@@ -1135,7 +1149,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         () => liquid.ECPair.makeRandom({ network: regtest }).publicKey,
       );
       const inputData = await getInputData(p2wpkh.payment, false, 'noredeem');
-      const psbt = new liquid.Psbt({ network: regtest })
+      let psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputData)
         .addOutputs([
           {
@@ -1154,8 +1168,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
             value: liquid.confidential.satoshiToConfidentialValue(3500),
           },
         ])
-        .blindOutputs(p2wpkh.blindingKeys, blindingPubkeys)
-        .signInput(0, p2wpkh.keys[0]);
+        .blindOutputs(p2wpkh.blindingKeys, blindingPubkeys);
+
+      psbt = psbt.signInput(0, p2wpkh.keys[0]);
       psbt.finalizeAllInputs();
       const tx = psbt.extractTransaction();
       await regtestUtils.broadcast(tx.toHex());
@@ -1227,7 +1242,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
       );
     }
 
-    const psbt = new liquid.Psbt({ network: regtest })
+    let psbt = await new liquid.Psbt({ network: regtest })
       .addInput(inputData)
       .addOutputs([
         {
@@ -1246,9 +1261,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
           value: liquid.confidential.satoshiToConfidentialValue(3500),
         },
       ])
-      .blindOutputs(p2wsh.blindingKeys, blindingPubkeys)
-      .signInput(0, p2wsh.keys[0]);
+      .blindOutputs(p2wsh.blindingKeys, blindingPubkeys);
 
+    psbt = psbt.signInput(0, p2wsh.keys[0]);
     assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
     psbt.finalizeAllInputs();
 
@@ -1299,7 +1314,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         () => liquid.ECPair.makeRandom({ network: regtest }).publicKey,
       );
       const inputData = await getInputData(p2wsh.payment, false, 'p2wsh');
-      const psbt = new liquid.Psbt({ network: regtest })
+      let psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputData)
         .addOutputs([
           {
@@ -1318,9 +1333,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
             value: liquid.confidential.satoshiToConfidentialValue(3500),
           },
         ])
-        .blindOutputs(p2wsh.blindingKeys, blindingPubkeys)
-        .signInput(0, p2wsh.keys[0]);
-      psbt.finalizeAllInputs();
+        .blindOutputs(p2wsh.blindingKeys, blindingPubkeys);
+
+      psbt = psbt.signInput(0, p2wsh.keys[0]).finalizeAllInputs();
       const tx = psbt.extractTransaction();
       await regtestUtils.broadcast(tx.toHex());
     },
@@ -1414,7 +1429,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         );
       }
 
-      const psbt = new liquid.Psbt({ network: regtest })
+      const psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputData)
         .addOutputs([
           {
@@ -1433,7 +1448,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
             value: liquid.confidential.satoshiToConfidentialValue(3500),
           },
         ])
-        .blindOutputs(p2sh.blindingKeys, blindingPubkeys)
+        .blindOutputs(p2sh.blindingKeys, blindingPubkeys);
+
+      psbt
         .signInput(0, p2sh.keys[0])
         .signInput(0, p2sh.keys[2])
         .signInput(0, p2sh.keys[3]);
@@ -1507,7 +1524,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         () => liquid.ECPair.makeRandom({ network: regtest }).publicKey,
       );
       const inputData = await getInputData(p2sh.payment, false, 'p2sh-p2wsh');
-      const psbt = new liquid.Psbt({ network: regtest })
+      const psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputData)
         .addOutputs([
           {
@@ -1526,11 +1543,14 @@ describe('liquidjs-lib (transactions with psbt)', () => {
             value: liquid.confidential.satoshiToConfidentialValue(3500),
           },
         ])
-        .blindOutputs(p2sh.blindingKeys, blindingPubkeys)
+        .blindOutputs(p2sh.blindingKeys, blindingPubkeys);
+
+      psbt
         .signInput(0, p2sh.keys[0])
         .signInput(0, p2sh.keys[2])
-        .signInput(0, p2sh.keys[3]);
-      psbt.finalizeAllInputs();
+        .signInput(0, p2sh.keys[3])
+        .finalizeAllInputs();
+
       const tx = psbt.extractTransaction();
       await regtestUtils.broadcast(tx.toHex());
     },
@@ -1587,7 +1607,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
         () => liquid.ECPair.makeRandom({ network: regtest }).publicKey,
       );
       const inputData = await getInputData(p2sh.payment, false, 'p2sh');
-      const psbt = new liquid.Psbt({ network: regtest })
+      const psbt = await new liquid.Psbt({ network: regtest })
         .addInput(inputData)
         .addOutputs([
           {
@@ -1606,9 +1626,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
             value: liquid.confidential.satoshiToConfidentialValue(3500),
           },
         ])
-        .blindOutputs(p2sh.blindingKeys, blindingPubkeys)
-        .signInput(0, p2sh.keys[0]);
-      psbt.finalizeAllInputs();
+        .blindOutputs(p2sh.blindingKeys, blindingPubkeys);
+
+      psbt.signInput(0, p2sh.keys[0]).finalizeAllInputs();
       const tx = psbt.extractTransaction();
       await regtestUtils.broadcast(tx.toHex());
     },
@@ -1720,7 +1740,7 @@ describe('liquidjs-lib (transactions with psbt)', () => {
     // You can add extra attributes for updateData into the addInput(s) object(s)
     Object.assign(inputData, updateData);
 
-    const psbt = new liquid.Psbt({ network: regtest })
+    const psbt = await new liquid.Psbt({ network: regtest })
       .addInput(inputData)
       // .updateInput(0, updateData) // if you didn't merge the bip32Derivation with inputData
       .addOutputs([
@@ -1740,8 +1760,9 @@ describe('liquidjs-lib (transactions with psbt)', () => {
           value: liquid.confidential.satoshiToConfidentialValue(3500),
         },
       ])
-      .blindOutputs(p2wpkh.blindingKeys, blindingPubkeys)
-      .signInputHD(0, hdRoot); // must sign with root!!!
+      .blindOutputs(p2wpkh.blindingKeys, blindingPubkeys);
+
+    psbt.signInputHD(0, hdRoot); // must sign with root!!!
 
     assert.strictEqual(psbt.validateSignaturesOfInput(0), true);
     assert.strictEqual(

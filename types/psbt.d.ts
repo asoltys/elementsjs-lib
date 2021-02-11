@@ -1,9 +1,9 @@
-import { Psbt as PsbtBase } from 'bip174';
-import { KeyValue, PsbtGlobalUpdate, PsbtInput, PsbtInputUpdate, PsbtOutput, PsbtOutputUpdate, TransactionInput, WitnessUtxo } from 'bip174/src/lib/interfaces';
 import * as confidential from './confidential';
-import { Signer, SignerAsync } from './ecpair';
+import { KeyValue, PsbtGlobalUpdate, PsbtInput, PsbtInputUpdate, PsbtOutput, PsbtOutputUpdate, TransactionInput, WitnessUtxo } from 'bip174/src/lib/interfaces';
 import { Network } from './networks';
 import { Transaction } from './transaction';
+import { Signer, SignerAsync } from './ecpair';
+import { Psbt as PsbtBase } from 'bip174';
 /**
  * Psbt class can parse and generate a PSBT binary based off of the BIP174.
  * There are 6 roles that this class fulfills. (Explained in BIP174)
@@ -76,8 +76,8 @@ export declare class Psbt {
     updateGlobal(updateData: PsbtGlobalUpdate): this;
     updateInput(inputIndex: number, updateData: PsbtInputUpdate): this;
     updateOutput(outputIndex: number, updateData: PsbtOutputUpdate): this;
-    blindOutputs(blindingDataLike: BlindingDataLike[], blindingPubkeys: Buffer[], opts?: RngOpts): this;
-    blindOutputsByIndex(inputsBlindingData: Map<number, BlindingDataLike>, outputsBlindingPubKeys: Map<number, Buffer>, opts?: RngOpts): this;
+    blindOutputs(blindingDataLike: BlindingDataLike[], blindingPubkeys: Buffer[], opts?: RngOpts): Promise<this>;
+    blindOutputsByIndex(inputsBlindingData: Map<number, BlindingDataLike>, outputsBlindingPubKeys: Map<number, Buffer>, opts?: RngOpts): Promise<this>;
     addUnknownKeyValToGlobal(keyVal: KeyValue): this;
     addUnknownKeyValToInput(inputIndex: number, keyVal: KeyValue): this;
     addUnknownKeyValToOutput(outputIndex: number, keyVal: KeyValue): this;
@@ -142,11 +142,11 @@ export declare type BlindingDataLike = Buffer | confidential.UnblindOutputResult
  * @param outputsData data = [satoshis, asset] of output to blind ([string Buffer])
  * @returns an array of BlindingData[] corresponding of blinders to blind outputs specified in outputsData
  */
-export declare function computeOutputsBlindingData(inputsBlindingData: confidential.UnblindOutputResult[], outputsData: Array<[string, Buffer]>): confidential.UnblindOutputResult[];
+export declare function computeOutputsBlindingData(inputsBlindingData: confidential.UnblindOutputResult[], outputsData: Array<[string, Buffer]>): Promise<confidential.UnblindOutputResult[]>;
 /**
  * toBlindingData convert a BlindingDataLike to UnblindOutputResult
  * @param blindDataLike blinding data "like" associated to a specific input I
  * @param witnessUtxo the prevout of the input I
  */
-export declare function toBlindingData(blindDataLike: BlindingDataLike, witnessUtxo?: WitnessUtxo): confidential.UnblindOutputResult;
+export declare function toBlindingData(blindDataLike: BlindingDataLike, witnessUtxo?: WitnessUtxo): Promise<confidential.UnblindOutputResult>;
 export {};

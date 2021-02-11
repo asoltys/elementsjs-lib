@@ -1,7 +1,10 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
 import * as confidential from '../src/confidential';
 import * as preFixtures from './fixtures/confidential.json';
+
+import { describe, it } from 'mocha';
+
+import { TxOutput } from '../ts_src/index';
 
 const initBuffers = (object: any): typeof preFixtures =>
   JSON.parse(JSON.stringify(object), (_, value) => {
@@ -62,13 +65,16 @@ describe('confidential', () => {
 
   it('unblind', () => {
     fixtures.valid.unblind.forEach((f: any) => {
-      const unblindProof = confidential.unblindOutput(
-        f.ephemeralPubkey,
+      const out: TxOutput = {
+        value: f.valueCommitment,
+        asset: f.assetGenerator,
+        script: f.scriptPubkey,
+        rangeProof: f.rangeproof,
+        nonce: f.ephemeralPubkey,
+      };
+      const unblindProof = confidential.unblindOutputWithKey(
+        out,
         f.blindingPrivkey,
-        f.rangeproof,
-        f.valueCommitment,
-        f.assetGenerator,
-        f.scriptPubkey,
       );
       assert.strictEqual(unblindProof.value, f.expected.value);
       assert.strictEqual(

@@ -1,7 +1,8 @@
-import * as secp256k1 from 'secp256k1-zkp';
-
 import * as bufferutils from './bufferutils';
 import * as crypto from './crypto';
+import * as secp256k1 from 'secp256k1-zkp';
+
+import { Output } from './transaction';
 
 function nonceHash(pubkey: Buffer, privkey: Buffer): Buffer {
   return crypto.sha256(secp256k1.ecdh.ecdh(pubkey, privkey));
@@ -49,22 +50,25 @@ export interface UnblindOutputResult {
   assetBlindingFactor: Buffer;
 }
 
-export function unblindOutput(
-  ephemeralPubkey: Buffer,
-  blindingPrivkey: Buffer,
-  rangeproof: Buffer,
-  valueCommit: Buffer,
-  asset: Buffer,
-  scriptPubkey: Buffer,
+export function unblindOutputWithKey(
+  out: Output,
+  blindingPrivKey: Buffer,
 ): UnblindOutputResult {
-  const gen = secp256k1.generator.parse(asset);
-  const nonce = nonceHash(ephemeralPubkey, blindingPrivkey);
+  const nonce = nonceHash(out.nonce, blindingPrivKey);
+  return unblindOutputWithNonce(out, nonce);
+}
+
+export function unblindOutputWithNonce(
+  out: Output,
+  nonce: Buffer,
+): UnblindOutputResult {
+  const gen = secp256k1.generator.parse(out.asset);
   const { value, blindFactor, message } = secp256k1.rangeproof.rewind(
-    valueCommit,
-    rangeproof,
+    out.value,
+    out.rangeProof!,
     nonce,
     gen,
-    scriptPubkey,
+    out.script,
   );
 
   return {

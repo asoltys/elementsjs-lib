@@ -1,8 +1,8 @@
 'use strict';
 Object.defineProperty(exports, '__esModule', { value: true });
-const secp256k1 = require('secp256k1-zkp');
 const bufferutils = require('./bufferutils');
 const crypto = require('./crypto');
+const secp256k1 = require('secp256k1-zkp');
 function nonceHash(pubkey, privkey) {
   return crypto.sha256(secp256k1.ecdh.ecdh(pubkey, privkey));
 }
@@ -37,22 +37,19 @@ function assetCommitment(asset, factor) {
   return secp256k1.generator.serialize(generator);
 }
 exports.assetCommitment = assetCommitment;
-function unblindOutput(
-  ephemeralPubkey,
-  blindingPrivkey,
-  rangeproof,
-  valueCommit,
-  asset,
-  scriptPubkey,
-) {
-  const gen = secp256k1.generator.parse(asset);
-  const nonce = nonceHash(ephemeralPubkey, blindingPrivkey);
+function unblindOutputWithKey(out, blindingPrivKey) {
+  const nonce = nonceHash(out.nonce, blindingPrivKey);
+  return unblindOutputWithNonce(out, nonce);
+}
+exports.unblindOutputWithKey = unblindOutputWithKey;
+function unblindOutputWithNonce(out, nonce) {
+  const gen = secp256k1.generator.parse(out.asset);
   const { value, blindFactor, message } = secp256k1.rangeproof.rewind(
-    valueCommit,
-    rangeproof,
+    out.value,
+    out.rangeProof,
     nonce,
     gen,
-    scriptPubkey,
+    out.script,
   );
   return {
     value,
@@ -61,7 +58,7 @@ function unblindOutput(
     assetBlindingFactor: message.slice(32),
   };
 }
-exports.unblindOutput = unblindOutput;
+exports.unblindOutputWithNonce = unblindOutputWithNonce;
 function rangeProofInfo(proof) {
   const { exp, mantissa, minValue, maxValue } = secp256k1.rangeproof.info(
     proof,

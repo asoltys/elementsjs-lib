@@ -230,7 +230,7 @@ function fromConfidentialLegacy(
   // Prefixes are 1 byte long, thus blinding key always starts at 3rd byte
   const blindingKey = payload.slice(2, 35);
   const unconfidential = payload.slice(35, payload.length);
-  const versionBuf = new Uint8Array(1);
+  const versionBuf = Buffer.alloc(1);
   versionBuf[0] = prefix;
   const unconfidentialAddressBuffer = Buffer.concat([
     versionBuf,
@@ -268,7 +268,7 @@ function toConfidentialLegacy(
   if (blindingKey.length < 33) throw new TypeError('Blinding key is too short');
   if (blindingKey.length > 33) throw new TypeError('Blinding key is too long');
 
-  const prefixBuf = new Uint8Array(2);
+  const prefixBuf = Buffer.alloc(2);
   prefixBuf[0] = network.confidentialPrefix;
   prefixBuf[1] = prefix;
   const confidentialAddress = Buffer.concat([

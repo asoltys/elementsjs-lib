@@ -48,7 +48,7 @@
     "types"
   ],
   "dependencies": {
-    "axios": "^0.19.2",
+    "@vulpemventures/secp256k1-zkp": "^2.0.0",
     "bech32": "^1.1.2",
     "bip174": "vulpemventures/bip174.git",
     "bip32": "^2.0.4",
@@ -61,13 +61,13 @@
     "merkle-lib": "^2.0.10",
     "pushdata-bitcoin": "^1.0.1",
     "randombytes": "^2.0.1",
-    "secp256k1-zkp": "github:vulpemventures/secp256k1-zkp",
     "tiny-secp256k1": "^1.1.1",
     "typeforce": "^1.11.3",
     "varuint-bitcoin": "^1.0.4",
     "wif": "^2.0.1"
   },
   "devDependencies": {
+    "axios": "^0.21.1",
     "@types/bs58": "^4.0.0",
     "@types/mocha": "^5.2.7",
     "@types/node": "12.7.5",

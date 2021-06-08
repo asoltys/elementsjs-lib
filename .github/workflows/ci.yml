@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ["8.x", "10.x", "12.x", "14.x"]
+        node: ["12.x", "14.x"]
 
     steps:
       - name: Checkout repo
@@ -22,18 +22,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Install Nigiri
-        run: |
-          mkdir -p tmp; cd tmp
-          curl https://travis.nigiri.network | bash; cd ..
-          docker-compose -f  tmp/docker-compose.yml up -d
-      - name: Install deps and build (with cache)
-        uses: bahmutov/npm-install@v1
+      - name: Install dependencies
+        run: npm install --ci
 
       - name: Lint
         run: |
           npm run format:ci
-          npm run gitdiff:ci
           npm run lint
           npm run lint:tests
 
@@ -42,6 +36,12 @@ jobs:
 
       - name: Unit Test
         run: npm run unit
+
+      - name: Install Nigiri
+        run: |
+          mkdir -p tmp; cd tmp
+          curl https://travis.nigiri.network | bash; cd ..
+          docker-compose -f  tmp/docker-compose.yml up -d
 
       - name: Integration Test
         env:

@@ -1,7 +1,7 @@
 import * as bscript from './script';
 import * as confidential from './confidential';
 import * as payments from './payments';
-import * as varuint from 'bip174/src/lib/converter/varint';
+import * as varuint from 'bip174-liquid/src/lib/converter/varint';
 
 import {
   Transaction as ITransaction,
@@ -15,7 +15,7 @@ import {
   TransactionFromBuffer,
   TransactionInput,
   WitnessUtxo,
-} from 'bip174/src/lib/interfaces';
+} from 'bip174-liquid/src/lib/interfaces';
 import { Network, liquid as btcNetwork } from './networks';
 import { Output, Transaction, ZERO } from './transaction';
 import {
@@ -25,8 +25,8 @@ import {
   fromPublicKey as ecPairFromPublicKey,
 } from './ecpair';
 
-import { Psbt as PsbtBase } from 'bip174';
-import { checkForInput } from 'bip174/src/lib/utils';
+import { Psbt as PsbtBase } from 'bip174-liquid';
+import { checkForInput } from 'bip174-liquid/src/lib/utils';
 import { hash160 } from './crypto';
 import { reverseBuffer } from './bufferutils';
 import { toOutputScript } from './address';

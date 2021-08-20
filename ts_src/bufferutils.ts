@@ -102,7 +102,6 @@ export class BufferWriter {
     this.writeVarSlice(input.inflationRangeProof);
     this.writeVector(input.witness);
     this.writeVector(input.peginWitness);
-
   }
 
   writeConfidentialOutFields(output: any): void {

@@ -9,8 +9,8 @@ describe('types', () => {
     const buffer32byte = Buffer.alloc(32);
 
     it('return true for valid size', () => {
-      assert(types.Hash160bit(buffer20byte));
-      assert(types.Hash256bit(buffer32byte));
+      assert.default(types.Hash160bit(buffer20byte));
+      assert.default(types.Hash256bit(buffer32byte));
     });
 
     it('return true for oneOf', () => {

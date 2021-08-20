@@ -383,8 +383,8 @@ class Transaction {
       });
       return bcrypto.hash256(tBuffer);
     }
-    function writeIssuances(ins) {
-      const issuanceSize = ins.reduce(
+    function issuanceSize(ins) {
+      return ins.reduce(
         (sum, txIn) =>
           !types.Null(txIn.issuance)
             ? sum +
@@ -392,10 +392,13 @@ class Transaction {
               txIn.issuance.assetEntropy.length +
               txIn.issuance.assetAmount.length +
               txIn.issuance.tokenAmount.length
-            : sum + 1, // we'll use the empty 00 Buffer if issuance is not set
+            : sum, // we'll use the empty 00 Buffer if issuance is not set
         0,
       );
-      const tBuffer = Buffer.allocUnsafe(issuanceSize);
+    }
+    function writeIssuances(ins, sizeIssuances) {
+      const size = sizeIssuances === 0 ? ins.length : sizeIssuances;
+      const tBuffer = Buffer.allocUnsafe(size);
       const tBufferWriter = new bufferutils_1.BufferWriter(tBuffer, 0);
       ins.forEach(txIn => {
         if (!types.Null(txIn.issuance)) {
@@ -433,6 +436,7 @@ class Transaction {
     let hashPrevouts = exports.ZERO;
     let hashSequences = exports.ZERO;
     let hashIssuances = exports.ZERO;
+    let sizeOfIssuances = 0;
     // Inputs
     if (!(hashType & Transaction.SIGHASH_ANYONECANPAY)) {
       hashPrevouts = writeInputs(this.ins);
@@ -447,7 +451,8 @@ class Transaction {
     }
     // Issuances
     if (!(hashType & Transaction.SIGHASH_ANYONECANPAY)) {
-      hashIssuances = writeIssuances(this.ins);
+      sizeOfIssuances = issuanceSize(this.ins);
+      hashIssuances = writeIssuances(this.ins, sizeOfIssuances);
     }
     // Outputs
     if (
@@ -462,6 +467,7 @@ class Transaction {
       hashOutputs = writeOutputs([this.outs[inIndex]]);
     }
     const input = this.ins[inIndex];
+    const hasIssuance = !types.Null(input.issuance);
     const bufferSize =
       4 + // version
       hashPrevouts.length +
@@ -473,6 +479,7 @@ class Transaction {
       value.length +
       4 + // input.sequence
       hashOutputs.length +
+      sizeOfIssuances +
       4 + // locktime
       4; // hashType
     const buffer = Buffer.allocUnsafe(bufferSize);
@@ -486,7 +493,7 @@ class Transaction {
     bufferWriter.writeVarSlice(prevOutScript);
     bufferWriter.writeSlice(value);
     bufferWriter.writeUInt32(input.sequence);
-    if (!types.Null(input.issuance)) {
+    if (hasIssuance) {
       bufferWriter.writeSlice(input.issuance.assetBlindingNonce);
       bufferWriter.writeSlice(input.issuance.assetEntropy);
       bufferWriter.writeSlice(input.issuance.assetAmount);
@@ -509,7 +516,7 @@ class Transaction {
     return bufferutils_1.reverseBuffer(this.getHash(false)).toString('hex');
   }
   toBuffer(buffer, initialOffset) {
-    return this.__toBuffer(buffer, initialOffset, true);
+    return this.__toBuffer(buffer, initialOffset, true, false);
   }
   toHex() {
     return this.toBuffer(undefined, undefined).toString('hex');
@@ -551,60 +558,47 @@ class Transaction {
     this.outs[index].surjectionProof = proof;
   }
   __byteLength(_ALLOW_WITNESS, forSignature) {
-    const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
-    return (
+    const extraByte = forSignature ? 0 : 1;
+    let size =
       8 +
-      (forSignature ? 0 : 1) +
+      extraByte +
       varuint.encodingLength(this.ins.length) +
-      varuint.encodingLength(this.outs.length) +
-      this.ins.reduce((sum, input) => {
-        return (
-          sum +
-          40 +
-          varSliceSize(input.script) +
-          (input.issuance
-            ? 64 +
-              input.issuance.assetAmount.length +
-              input.issuance.tokenAmount.length
-            : 0)
-        );
-      }, 0) +
-      this.outs.reduce((sum, output) => {
-        return (
-          sum +
-          output.asset.length +
-          output.value.length +
-          output.nonce.length +
-          varSliceSize(output.script)
-        );
-      }, 0) +
-      (hasWitnesses
-        ? this.ins.reduce((sum, input) => {
-            return (
-              sum +
-              varSliceSize(input.issuanceRangeProof) +
-              varSliceSize(input.inflationRangeProof) +
-              varuint.encodingLength(input.witness.length) +
-              input.witness.reduce((scriptSum, scriptWit) => {
-                return scriptSum + varSliceSize(scriptWit);
-              }, 0) +
-              varuint.encodingLength(input.peginWitness.length) +
-              input.peginWitness.reduce((peginSum, peginWit) => {
-                return peginSum + varSliceSize(peginWit);
-              }, 0)
-            );
-          }, 0)
-        : 0) +
-      (hasWitnesses
-        ? this.outs.reduce((sum, output) => {
-            return (
-              sum +
-              varSliceSize(output.surjectionProof) +
-              varSliceSize(output.rangeProof)
-            );
-          }, 0)
-        : 0)
-    );
+      varuint.encodingLength(this.outs.length);
+    for (const txIn of this.ins) {
+      size += 40 + varSliceSize(txIn.script);
+      if (txIn.issuance) {
+        size +=
+          64 +
+          txIn.issuance.assetAmount.length +
+          txIn.issuance.tokenAmount.length;
+      }
+    }
+    for (const txOut of this.outs) {
+      size +=
+        txOut.asset.length +
+        txOut.value.length +
+        txOut.nonce.length +
+        varSliceSize(txOut.script);
+    }
+    if (_ALLOW_WITNESS && this.hasWitnesses()) {
+      for (const txIn of this.ins) {
+        size += varSliceSize(txIn.issuanceRangeProof);
+        size += varSliceSize(txIn.inflationRangeProof);
+        size += varuint.encodingLength(txIn.witness.length);
+        for (const wit of txIn.witness) {
+          size += varSliceSize(wit);
+        }
+        size += varuint.encodingLength((txIn.peginWitness || []).length);
+        for (const wit of txIn.peginWitness || []) {
+          size += varSliceSize(wit);
+        }
+      }
+      for (const txOut of this.outs) {
+        size += varSliceSize(txOut.surjectionProof);
+        size += varSliceSize(txOut.rangeProof);
+      }
+    }
+    return size;
   }
   __toBuffer(
     buffer,
@@ -624,24 +618,21 @@ class Transaction {
     bufferWriter.writeInt32(this.version);
     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
     if (!forSignature) {
-      if (
-        hasWitnesses &&
-        (forceZeroFlag === false || forceZeroFlag === undefined)
-      )
-        bufferWriter.writeUInt8(Transaction.ADVANCED_TRANSACTION_FLAG);
-      else bufferWriter.writeUInt8(Transaction.ADVANCED_TRANSACTION_MARKER);
+      let value = Transaction.ADVANCED_TRANSACTION_MARKER;
+      if (hasWitnesses && !forceZeroFlag) {
+        value = Transaction.ADVANCED_TRANSACTION_FLAG;
+      }
+      bufferWriter.writeUInt8(value);
     }
     bufferWriter.writeVarInt(this.ins.length);
     this.ins.forEach(txIn => {
       bufferWriter.writeSlice(txIn.hash);
       let prevIndex = txIn.index;
-      if (forceZeroFlag === false || forceZeroFlag === undefined) {
-        if (txIn.issuance) {
-          prevIndex = (prevIndex | OUTPOINT_ISSUANCE_FLAG) >>> 0;
-        }
-        if (txIn.isPegin) {
-          prevIndex = (prevIndex | OUTPOINT_PEGIN_FLAG) >>> 0;
-        }
+      if (txIn.issuance) {
+        prevIndex = (prevIndex | OUTPOINT_ISSUANCE_FLAG) >>> 0;
+      }
+      if (txIn.isPegin) {
+        prevIndex = (prevIndex | OUTPOINT_PEGIN_FLAG) >>> 0;
       }
       bufferWriter.writeUInt32(prevIndex);
       bufferWriter.writeVarSlice(txIn.script);

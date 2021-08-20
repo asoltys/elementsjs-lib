@@ -23,18 +23,20 @@
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    "esModuleInterop": false,
+    "esModuleInterop": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "baseUrl": ".",
     "paths": {
-      "../src/*": ["../ts_src/*"]
+      "../src/*": [
+        "../ts_src/*"
+      ]
     }
   },
   "include": [
-      "./**/*.ts"
+    "./**/*.ts"
   ],
   "exclude": [
-      "../ts_src/**/*.ts"
+    "../ts_src/**/*.ts"
   ]
 }

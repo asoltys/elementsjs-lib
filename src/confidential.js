@@ -136,7 +136,10 @@ function rangeProofInfo(proof) {
   });
 }
 exports.rangeProofInfo = rangeProofInfo;
-function rangeProof(
+/**
+ *  nonceHash from blinding key + ephemeral key and then rangeProof computation
+ */
+function rangeProofWithNonceHash(
   value,
   blindingPubkey,
   ephemeralPrivkey,
@@ -150,8 +153,39 @@ function rangeProof(
   minBits,
 ) {
   return __awaiter(this, void 0, void 0, function*() {
-    const { generator, pedersen, rangeproof } = yield secp256k1Promise;
     const nonce = yield nonceHash(blindingPubkey, ephemeralPrivkey);
+    return rangeProof(
+      value,
+      nonce,
+      asset,
+      assetBlindingFactor,
+      valueBlindFactor,
+      valueCommit,
+      scriptPubkey,
+      minValue,
+      exp,
+      minBits,
+    );
+  });
+}
+exports.rangeProofWithNonceHash = rangeProofWithNonceHash;
+/**
+ *  rangeProof computation without nonceHash step.
+ */
+function rangeProof(
+  value,
+  nonce,
+  asset,
+  assetBlindingFactor,
+  valueBlindFactor,
+  valueCommit,
+  scriptPubkey,
+  minValue,
+  exp,
+  minBits,
+) {
+  return __awaiter(this, void 0, void 0, function*() {
+    const { generator, pedersen, rangeproof } = yield secp256k1Promise;
     const gen = generator.generateBlinded(asset, assetBlindingFactor);
     const message = Buffer.concat([asset, assetBlindingFactor]);
     const commit = pedersen.commitParse(valueCommit);

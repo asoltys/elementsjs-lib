@@ -1,9 +1,4 @@
-export interface Issuance {
-    assetBlindingNonce: Buffer;
-    assetEntropy: Buffer;
-    assetAmount: Buffer;
-    tokenAmount: Buffer;
-}
+import { Issuance } from './issuance';
 export declare const ZERO: Buffer;
 export interface Output {
     script: Buffer;

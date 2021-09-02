@@ -10,17 +10,37 @@ var __importStar =
     result['default'] = mod;
     return result;
   };
+var __importDefault =
+  (this && this.__importDefault) ||
+  function(mod) {
+    return mod && mod.__esModule ? mod : { default: mod };
+  };
 Object.defineProperty(exports, '__esModule', { value: true });
 const networks = __importStar(require('./networks'));
 const payments = __importStar(require('./payments'));
 const bscript = __importStar(require('./script'));
 const types = __importStar(require('./types'));
 const blech32_1 = require('blech32');
-const bech32 = require('bech32');
-const bs58check = require('bs58check');
+const bech32_1 = __importDefault(require('bech32'));
+const bs58check_1 = __importDefault(require('bs58check'));
 const typeforce = require('typeforce');
+// negative value for confidential types
+var AddressType;
+(function(AddressType) {
+  AddressType[(AddressType['P2Pkh'] = 0)] = 'P2Pkh';
+  AddressType[(AddressType['P2Sh'] = 1)] = 'P2Sh';
+  AddressType[(AddressType['P2Wpkh'] = 2)] = 'P2Wpkh';
+  AddressType[(AddressType['P2Wsh'] = 3)] = 'P2Wsh';
+  AddressType[(AddressType['ConfidentialP2Pkh'] = 4)] = 'ConfidentialP2Pkh';
+  AddressType[(AddressType['ConfidentialP2Sh'] = 5)] = 'ConfidentialP2Sh';
+  AddressType[(AddressType['ConfidentialP2Wpkh'] = 6)] = 'ConfidentialP2Wpkh';
+  AddressType[(AddressType['ConfidentialP2Wsh'] = 7)] = 'ConfidentialP2Wsh';
+})(AddressType || (AddressType = {}));
+function isConfidentialAddressType(addressType) {
+  return addressType >= 4;
+}
 function fromBase58Check(address) {
-  const payload = bs58check.decode(address);
+  const payload = bs58check_1.default.decode(address);
   // TODO: 4.0.0, move to "toOutputScript"
   if (payload.length < 21) throw new TypeError(address + ' is too short');
   if (payload.length > 21) throw new TypeError(address + ' is too long');
@@ -30,8 +50,8 @@ function fromBase58Check(address) {
 }
 exports.fromBase58Check = fromBase58Check;
 function fromBech32(address) {
-  const result = bech32.decode(address);
-  const data = bech32.fromWords(result.words.slice(1));
+  const result = bech32_1.default.decode(address);
+  const data = bech32_1.default.fromWords(result.words.slice(1));
   return {
     version: result.words[0],
     prefix: result.prefix,
@@ -66,13 +86,13 @@ function toBase58Check(hash, version) {
   const payload = Buffer.allocUnsafe(21);
   payload.writeUInt8(version, 0);
   hash.copy(payload, 1);
-  return bs58check.encode(payload);
+  return bs58check_1.default.encode(payload);
 }
 exports.toBase58Check = toBase58Check;
 function toBech32(data, version, prefix) {
-  const words = bech32.toWords(data);
+  const words = bech32_1.default.toWords(data);
   words.unshift(version);
-  return bech32.encode(prefix, words);
+  return bech32_1.default.encode(prefix, words);
 }
 exports.toBech32 = toBech32;
 function toBlech32(data, pubkey, prefix) {
@@ -110,37 +130,37 @@ function fromOutputScript(output, network) {
 exports.fromOutputScript = fromOutputScript;
 function toOutputScript(address, network) {
   network = network || getNetwork(address);
-  let decodeBase58;
-  let decodeBech32;
-  let decodeConfidential;
+  let decodeBase58result;
+  let decodeBech32result;
+  let decodeConfidentialresult;
   try {
-    decodeBase58 = fromBase58Check(address);
+    decodeBase58result = fromBase58Check(address);
   } catch (e) {}
-  if (decodeBase58) {
-    if (decodeBase58.version === network.pubKeyHash)
-      return payments.p2pkh({ hash: decodeBase58.hash }).output;
-    if (decodeBase58.version === network.scriptHash)
-      return payments.p2sh({ hash: decodeBase58.hash }).output;
+  if (decodeBase58result) {
+    if (decodeBase58result.version === network.pubKeyHash)
+      return payments.p2pkh({ hash: decodeBase58result.hash }).output;
+    if (decodeBase58result.version === network.scriptHash)
+      return payments.p2sh({ hash: decodeBase58result.hash }).output;
   } else {
     try {
-      decodeBech32 = fromBech32(address);
+      decodeBech32result = fromBech32(address);
     } catch (e) {}
-    if (decodeBech32) {
-      if (decodeBech32.prefix !== network.bech32)
+    if (decodeBech32result) {
+      if (decodeBech32result.prefix !== network.bech32)
         throw new Error(address + ' has an invalid prefix');
-      if (decodeBech32.version === 0) {
-        if (decodeBech32.data.length === 20)
-          return payments.p2wpkh({ hash: decodeBech32.data }).output;
-        if (decodeBech32.data.length === 32)
-          return payments.p2wsh({ hash: decodeBech32.data }).output;
+      if (decodeBech32result.version === 0) {
+        if (decodeBech32result.data.length === 20)
+          return payments.p2wpkh({ hash: decodeBech32result.data }).output;
+        if (decodeBech32result.data.length === 32)
+          return payments.p2wsh({ hash: decodeBech32result.data }).output;
       }
     } else {
       try {
-        decodeConfidential = fromConfidential(address);
+        decodeConfidentialresult = fromConfidential(address);
       } catch (e) {}
-      if (decodeConfidential) {
+      if (decodeConfidentialresult) {
         return toOutputScript(
-          decodeConfidential.unconfidentialAddress,
+          decodeConfidentialresult.unconfidentialAddress,
           network,
         );
       }
@@ -160,7 +180,7 @@ function getNetwork(address) {
     address.startsWith(networks.regtest.bech32)
   )
     return networks.regtest;
-  const payload = bs58check.decode(address);
+  const payload = bs58check_1.default.decode(address);
   const prefix = payload.readUInt8(0);
   if (
     prefix === networks.liquid.confidentialPrefix ||
@@ -178,7 +198,7 @@ function getNetwork(address) {
 }
 exports.getNetwork = getNetwork;
 function fromConfidentialLegacy(address, network) {
-  const payload = bs58check.decode(address);
+  const payload = bs58check_1.default.decode(address);
   const prefix = payload.readUInt8(1);
   // Check if address has valid length and prefix
   if (prefix !== network.pubKeyHash && prefix !== network.scriptHash)
@@ -196,7 +216,9 @@ function fromConfidentialLegacy(address, network) {
     versionBuf,
     unconfidential,
   ]);
-  const unconfidentialAddress = bs58check.encode(unconfidentialAddressBuffer);
+  const unconfidentialAddress = bs58check_1.default.encode(
+    unconfidentialAddressBuffer,
+  );
   return { blindingKey, unconfidentialAddress };
 }
 function fromConfidentialSegwit(address, network) {
@@ -205,7 +227,7 @@ function fromConfidentialSegwit(address, network) {
   return { blindingKey: result.pubkey, unconfidentialAddress };
 }
 function toConfidentialLegacy(address, blindingKey, network) {
-  const payload = bs58check.decode(address);
+  const payload = bs58check_1.default.decode(address);
   const prefix = payload.readUInt8(0);
   // Check if address has valid length and prefix
   if (
@@ -224,9 +246,100 @@ function toConfidentialLegacy(address, blindingKey, network) {
     blindingKey,
     Buffer.from(payload.slice(1)),
   ]);
-  return bs58check.encode(confidentialAddress);
+  return bs58check_1.default.encode(confidentialAddress);
 }
 function toConfidentialSegwit(address, blindingKey, network) {
   const data = toOutputScript(address, network);
   return toBlech32(data, blindingKey, network.blech32);
 }
+function isBlech32(address, network) {
+  return address.startsWith(network.blech32);
+}
+function decodeBlech32(address) {
+  const blech32addr = fromBlech32(address);
+  switch (blech32addr.data.length) {
+    case 20:
+      return AddressType.ConfidentialP2Wpkh;
+    case 32:
+      return AddressType.ConfidentialP2Wsh;
+    default:
+      throw new Error('invalid program length');
+  }
+}
+function isBech32(address, network) {
+  return address.startsWith(network.bech32);
+}
+function decodeBech32(address) {
+  const bech32addr = fromBech32(address);
+  switch (bech32addr.data.length) {
+    case 20:
+      return AddressType.P2Wpkh;
+    case 32:
+      return AddressType.P2Wsh;
+    default:
+      throw new Error('invalid program length');
+  }
+}
+function UnkownPrefixError(prefix, network) {
+  return new Error(
+    `unknown address prefix (${prefix}), need ${network.pubKeyHash} or ${
+      network.scriptHash
+    }`,
+  );
+}
+function decodeBase58(address, network) {
+  const payload = bs58check_1.default.decode(address);
+  // Blinded decoded haddress has the form:
+  // BLIND_PREFIX|ADDRESS_PREFIX|BLINDING_KEY|SCRIPT_HASH
+  // Prefixes are 1 byte long, thus blinding key always starts at 3rd byte
+  const prefix = payload.readUInt8(1);
+  if (payload.readUInt8(0) === network.confidentialPrefix) {
+    const unconfidentialPart = payload.slice(35); // ignore the blinding key
+    if (unconfidentialPart.length !== 20) {
+      // ripem160 hash size
+      throw new Error('decoded address is of unknown size');
+    }
+    switch (prefix) {
+      case network.pubKeyHash:
+        return AddressType.ConfidentialP2Pkh;
+      case network.scriptHash:
+        return AddressType.ConfidentialP2Sh;
+      default:
+        throw UnkownPrefixError(prefix, network);
+    }
+  }
+  // unconf case
+  const unconfidential = payload.slice(2);
+  if (unconfidential.length !== 20) {
+    // ripem160 hash size
+    throw new Error('decoded address is of unknown size');
+  }
+  switch (prefix) {
+    case network.pubKeyHash:
+      return AddressType.P2Pkh;
+    case network.scriptHash:
+      return AddressType.P2Sh;
+    default:
+      throw UnkownPrefixError(prefix, network);
+  }
+}
+function decodeType(address, network) {
+  network = network || getNetwork(address);
+  if (isBech32(address, network)) {
+    return decodeBech32(address);
+  }
+  if (isBlech32(address, network)) {
+    return decodeBlech32(address);
+  }
+  return decodeBase58(address, network);
+}
+exports.decodeType = decodeType;
+/**
+ * A quick check used to verify if a string could be a valid confidential address.
+ * @param address address to check.
+ */
+function isConfidential(address) {
+  const type = decodeType(address);
+  return isConfidentialAddressType(type);
+}
+exports.isConfidential = isConfidential;

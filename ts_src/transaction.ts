@@ -1,15 +1,9 @@
 import { BufferReader, BufferWriter, reverseBuffer } from './bufferutils';
 import * as bcrypto from './crypto';
+import { Issuance } from './issuance';
 import * as bscript from './script';
 import { OPS as opcodes } from './script';
 import * as types from './types';
-
-export interface Issuance {
-  assetBlindingNonce: Buffer;
-  assetEntropy: Buffer;
-  assetAmount: Buffer;
-  tokenAmount: Buffer;
-}
 
 const typeforce = require('typeforce');
 const varuint = require('varuint-bitcoin');

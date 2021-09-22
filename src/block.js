@@ -91,8 +91,6 @@ class Block {
         block.merkleRoot = readSlice(32);
         block.timestamp = readUInt32();
         block.blockHeight = readUInt32();
-        block.bits = readUInt32(); // remove
-        block.nonce = readUInt32(); // remove
         if (isDyna) {
             // current params
             let serializeType = readUInt8();
@@ -102,7 +100,7 @@ class Block {
                 case 1: // compact params
                     const signBlockScriptLengthCompact = readVarInt();
                     const signBlockScriptCompact = readSlice(signBlockScriptLengthCompact);
-                    const signBlockWitnessLimitCompact = readUInt8();
+                    const signBlockWitnessLimitCompact = readUInt32();
                     const elidedRootCompact = readSlice(32);
                     block.currentSignBlockScript = signBlockScriptCompact;
                     block.currentSignBlockWitnessLimit = signBlockWitnessLimitCompact;

@@ -36,12 +36,6 @@ export class Block {
       return i;
     };
 
-    // const readInt32 = (): number => {
-    //   const i = buffer.readInt32LE(offset);
-    //   offset += 4;
-    //   return i;
-    // };
-
     const readVarInt = (): number => {
       const vi = varuint.decode(buffer, offset);
       offset += varuint.decode.bytes;

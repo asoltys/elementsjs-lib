@@ -30,27 +30,137 @@ export class Block {
       return i;
     };
 
-    const readInt32 = (): number => {
-      const i = buffer.readInt32LE(offset);
-      offset += 4;
+    const readUInt8 = (): number => {
+      const i = buffer.readUInt8(offset);
+      offset += 1;
       return i;
     };
 
-    const block = new Block();
-    block.version = readInt32();
-    block.prevHash = readSlice(32);
-    block.merkleRoot = readSlice(32);
-    block.timestamp = readUInt32();
-    block.bits = readUInt32();
-    block.nonce = readUInt32();
-
-    if (buffer.length === 80) return block;
+    // const readInt32 = (): number => {
+    //   const i = buffer.readInt32LE(offset);
+    //   offset += 4;
+    //   return i;
+    // };
 
     const readVarInt = (): number => {
       const vi = varuint.decode(buffer, offset);
       offset += varuint.decode.bytes;
       return vi;
     };
+
+    const block = new Block();
+    block.version = readUInt32();
+
+    const isDyna = block.version >>> 31 === 1;
+    if (isDyna) {
+      block.version &= 0x7fff_ffff;
+    }
+    block.prevHash = readSlice(32);
+    block.merkleRoot = readSlice(32);
+    block.timestamp = readUInt32();
+    block.blockHeight = readUInt32();
+
+    if (isDyna) {
+      // current params
+      let serializeType = readUInt8();
+      switch (serializeType) {
+        case 0: // null
+          break;
+        case 1: // compact params
+          const signBlockScriptLengthCompact = readVarInt();
+          const signBlockScriptCompact = readSlice(signBlockScriptLengthCompact);
+          const signBlockWitnessLimitCompact = readUInt32();
+          const elidedRootCompact = readSlice(32);
+
+          block.currentSignBlockScript = signBlockScriptCompact;
+          block.currentSignBlockWitnessLimit = signBlockWitnessLimitCompact;
+          block.currentElidedRoot = elidedRootCompact;
+          break;
+        case 2: // full params
+          const signBlockScriptLengthFull = readVarInt();
+          const signBlockScriptFull = readSlice(signBlockScriptLengthFull);
+          const signBlockWitnessLimitFull = readUInt32();
+          const fedpegProgramLength = readVarInt();
+          const fedpegProgram = readSlice(fedpegProgramLength);
+          const fedpegScriptLength = readVarInt();
+          const fedpegScript = readSlice(fedpegScriptLength);
+          const extensionSpaceLength = readVarInt();
+
+          const extensionSpace = [];
+          for (let i = 0; i < extensionSpaceLength; i++) {
+            const tmpLen = readVarInt();
+            const tmp = readSlice(tmpLen);
+            extensionSpace.unshift(tmp);
+          }
+          block.currentSignBlockScriptFull = signBlockScriptFull;
+          block.currentSignBlockWitnessLimitFull = signBlockWitnessLimitFull;
+          block.currentFedpegProgram = fedpegProgram;
+          block.currentFedpegScript = fedpegScript;
+          block.currentExtensionSpace = extensionSpace;
+          break;
+        default:
+          throw new Error('bad serialize type for dynafed parameters');
+      }
+
+      // proposed params
+      serializeType = readUInt8();
+      switch (serializeType) {
+        case 0: // null
+          break;
+        case 1: // compact params
+          const signBlockScriptLengthCompact = readVarInt();
+          const signBlockScriptCompact = readSlice(signBlockScriptLengthCompact);
+          const signBlockWitnessLimitCompact = readUInt8();
+          const elidedRootCompact = readSlice(32);
+
+          block.proposedSignBlockScript = signBlockScriptCompact;
+          block.proposedSignBlockWitnessLimit = signBlockWitnessLimitCompact;
+          block.proposedElidedRoot = elidedRootCompact;
+          break;
+        case 2: // full params
+          const signBlockScriptLengthFull = readVarInt();
+          const signBlockScriptFull = readSlice(signBlockScriptLengthFull);
+          const signBlockWitnessLimitFull = readUInt32();
+          const fedpegProgramLength = readVarInt();
+          const fedpegProgram = readSlice(fedpegProgramLength);
+          const fedpegScriptLength = readVarInt();
+          const fedpegScript = readSlice(fedpegScriptLength);
+          const extensionSpaceLength = readVarInt();
+
+          const extensionSpace = [];
+          for (let i = 0; i < extensionSpaceLength; i++) {
+            const tmpLen = readVarInt();
+            const tmp = readSlice(tmpLen);
+            extensionSpace.unshift(tmp);
+          }
+          block.proposedSignBlockScriptFull = signBlockScriptFull;
+          block.proposedSignBlockWitnessLimitFull = signBlockWitnessLimitFull;
+          block.proposedFedpegProgram = fedpegProgram;
+          block.proposedFedpegScript = fedpegScript;
+          block.proposedExtensionSpace = extensionSpace;
+          break;
+        default:
+          throw new Error('bad serialize type for dynafed parameters');
+      }
+      const signBlockWitnessLength = readVarInt();
+      const signBlockWitness = [];
+      for (let i = 0; i < signBlockWitnessLength; i++) {
+        const tmpLen = readVarInt();
+        const tmp = readSlice(tmpLen);
+        signBlockWitness.unshift(tmp);
+      }
+      block.signBlockWitness = signBlockWitness;
+
+    } else {
+      const challengeLength = readVarInt();
+      const challenge = readSlice(challengeLength);
+      const solutionLength = readVarInt();
+      const solution = readSlice(solutionLength);
+      block.challenge = challenge;
+      block.solution = solution;
+    }
+
+    if (buffer.length === 80) return block;
 
     const readTransaction = (): any => {
       const tx = Transaction.fromBuffer(buffer.slice(offset), true);
@@ -115,6 +225,34 @@ export class Block {
   bits: number = 0;
   nonce: number = 0;
   transactions?: Transaction[] = undefined;
+  blockHeight: number = 0;
+
+  // DYNAMIC FEDERATION PARAMS
+  // current compact params
+  currentSignBlockScript?: Buffer = undefined;
+  currentSignBlockWitnessLimit: number = 0;
+  currentElidedRoot?: Buffer = undefined;
+  // current full param
+  currentSignBlockScriptFull?: Buffer = undefined;
+  currentSignBlockWitnessLimitFull: number = 0;
+  currentFedpegProgram?: Buffer = undefined;
+  currentFedpegScript?: Buffer = undefined;
+  currentExtensionSpace?: Buffer[] = undefined;
+  // proposed compact params
+  proposedSignBlockScript?: Buffer = undefined;
+  proposedSignBlockWitnessLimit: number = 0;
+  proposedElidedRoot?: Buffer = undefined;
+  // proposed full param
+  proposedSignBlockScriptFull?: Buffer = undefined;
+  proposedSignBlockWitnessLimitFull: number = 0;
+  proposedFedpegProgram?: Buffer = undefined;
+  proposedFedpegScript?: Buffer = undefined;
+  proposedExtensionSpace?: Buffer[] = undefined;
+  // SignBlockWitness
+  signBlockWitness?: Buffer[] = undefined;
+
+  challenge?: Buffer = undefined;
+  solution?: Buffer = undefined;
 
   getWitnessCommit(): Buffer | null {
     if (!txesHaveWitnessCommit(this.transactions!)) return null;

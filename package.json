@@ -48,6 +48,7 @@
     "types"
   ],
   "dependencies": {
+    "@types/jest": "^27.0.2",
     "@vulpemventures/secp256k1-zkp": "^2.0.0",
     "axios": "^0.21.1",
     "bech32": "^1.1.2",
@@ -88,8 +89,8 @@
     "proxyquire": "^2.0.1",
     "rimraf": "^2.6.3",
     "ts-node": "^8.3.0",
-    "tslint": "^5.16.0",
-    "typescript": "3.2.2"
+    "tslint": "^5.20.1",
+    "typescript": "^3.2.2"
   },
   "license": "MIT"
 }

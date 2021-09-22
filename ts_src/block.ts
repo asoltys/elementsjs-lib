@@ -68,7 +68,9 @@ export class Block {
           break;
         case 1: // compact params
           const signBlockScriptLengthCompact = readVarInt();
-          const signBlockScriptCompact = readSlice(signBlockScriptLengthCompact);
+          const signBlockScriptCompact = readSlice(
+            signBlockScriptLengthCompact,
+          );
           const signBlockWitnessLimitCompact = readUInt32();
           const elidedRootCompact = readSlice(32);
 
@@ -109,7 +111,9 @@ export class Block {
           break;
         case 1: // compact params
           const signBlockScriptLengthCompact = readVarInt();
-          const signBlockScriptCompact = readSlice(signBlockScriptLengthCompact);
+          const signBlockScriptCompact = readSlice(
+            signBlockScriptLengthCompact,
+          );
           const signBlockWitnessLimitCompact = readUInt8();
           const elidedRootCompact = readSlice(32);
 
@@ -150,7 +154,6 @@ export class Block {
         signBlockWitness.unshift(tmp);
       }
       block.signBlockWitness = signBlockWitness;
-
     } else {
       const challengeLength = readVarInt();
       const challenge = readSlice(challengeLength);

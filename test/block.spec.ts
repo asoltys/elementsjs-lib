@@ -4,6 +4,6 @@ import * as block from '../ts_src/block';
 
 describe('block deserialization ', () => {
   fixtures.test.forEach(f => {
-      block.Block.fromBuffer(Buffer.from(f.hex, 'hex'));
+    block.Block.fromBuffer(Buffer.from(f.hex, 'hex'));
   });
 });
